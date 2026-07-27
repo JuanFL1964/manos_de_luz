@@ -4,11 +4,9 @@
 <meta charset="UTF-8">
 <title>Manos de Luz - Gestión</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- Firebase SDK (Versión Compat para funcionar directamente en HTML) -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <script>
-// ===== CONFIGURACIÓN DE FIREBASE =====
 const firebaseConfig = {
   apiKey: "AIzaSyByfQM9JByNrWD1R1qZ28pjBrxC5sGvbUY",
   authDomain: "manos-de-luz-22395.firebaseapp.com",
@@ -17,24 +15,20 @@ const firebaseConfig = {
   messagingSenderId: "499122019530",
   appId: "1:499122019530:web:83b26b248daab403c2a833"
 };
-
-// Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Variables globales (se llenarán automáticamente desde Firebase)
 var clientes = [];
 var citas = [];
 var cobros = [];
 var tarifas = {};
 var editandoCliente = null;
 var editandoCita = null;
-var datosCambiados = false;
-var graficoIngresos = null;
-var graficoMetodos = null;
 var clientesFiltrados = [];
 var cobroPendiente = null;
 var metodoSeleccionado = null;
+var graficoIngresos = null;
+var graficoMetodos = null;
 
 var tarifasPorDefecto = {
     'relajante_60': 50, 'relajante_90': 75, 'relajante_120': 100,
@@ -46,44 +40,703 @@ var tarifasPorDefecto = {
     'rtp_60': 50, 'rtp_90': 75, 'rtp_120': 100
 };
 
-// ===== SINCRONIZACIÓN EN TIEMPO REAL CON FIREBASE =====
 function iniciarSincronizacion() {
-    // 1. Escuchar Clientes
     db.collection('clientes').onSnapshot(snapshot => {
         clientes = [];
         snapshot.forEach(doc => { clientes.push({id: doc.id, ...doc.data()}); });
         clientes.sort((a,b) => a.nombre.localeCompare(b.nombre));
         actualizarTablaClientes();
         actualizar();
+        actualizarListadoMasajes();
     });
-    
-    // 2. Escuchar Citas
     db.collection('citas').onSnapshot(snapshot => {
         citas = [];
         snapshot.forEach(doc => { citas.push({id: doc.id, ...doc.data()}); });
         actualizar();
         actualizarCaja();
+        actualizarListadoMasajes();
     });
-    
-    // 3. Escuchar Cobros
     db.collection('cobros').onSnapshot(snapshot => {
         cobros = [];
         snapshot.forEach(doc => { cobros.push({id: doc.id, ...doc.data()}); });
         actualizarCaja();
-        actualizarGraficos();
     });
-    
-    // 4. Escuchar Tarifas
     db.collection('tarifas').doc('precios').onSnapshot(doc => {
-        if (doc.exists) {
-            tarifas = doc.data();
-        } else {
-            tarifas = {...tarifasPorDefecto};
-            db.collection('tarifas').doc('precios').set(tarifas);
-        }
+        if (doc.exists) { tarifas = doc.data(); }
+        else { tarifas = {...tarifasPorDefecto}; db.collection('tarifas').doc('precios').set(tarifas); }
         cargarTarifasEnFormulario();
     });
 }
+
+var diasSemana = ['Domingo', 'Lunes', 'Martes', 'Mi\u00e9rcoles', 'Jueves', 'Viernes', 'S\u00e1bado'];
+var mesesAnio = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+function actualizarReloj() {
+    var ahora = new Date();
+    document.getElementById('reloj-fecha').textContent = diasSemana[ahora.getDay()] + ', ' + ahora.getDate() + ' de ' + mesesAnio[ahora.getMonth()] + ' de ' + ahora.getFullYear();
+    document.getElementById('reloj-hora').textContent = String(ahora.getHours()).padStart(2,'0') + ':' + String(ahora.getMinutes()).padStart(2,'0') + ':' + String(ahora.getSeconds()).padStart(2,'0');
+}
+
+function cambiar(n) {
+    for(var i=1; i<=5; i++) {
+        document.getElementById('s'+i).classList.remove('active');
+        var btn = document.getElementById('b'+i);
+        if(btn) btn.classList.remove('active');
+    }
+    document.getElementById('s' + n).classList.add('active');
+    document.getElementById('b' + n).classList.add('active');
+}
+
+// ===== VISUALIZADOR DE HORARIOS Y SOLAPAMIENTO =====
+function abrirSelectorHoras() {
+    var fecha = document.getElementById('d1').value;
+    if (!fecha) { alert('Primero selecciona una fecha'); return; }
+    var visualizador = document.getElementById('visualizador-horarios');
+    visualizador.style.display = 'block';
+    visualizador.classList.add('activo');
+    mostrarVisualizadorHorarios(fecha);
+    visualizador.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function mostrarVisualizadorHorarios(fecha) {
+    document.getElementById('fecha-seleccionada').textContent = fecha;
+    var grid = document.getElementById('horario-grid');
+    grid.innerHTML = '';
+    var horaActual = document.getElementById('t1').value;
+    for (var hora = 9; hora <= 21; hora++) {
+        for (var minuto = 0; minuto < 60; minuto += 15) {
+            var timeStr = String(hora).padStart(2, '0') + ':' + String(minuto).padStart(2, '0');
+            var slot = document.createElement('div');
+            slot.className = 'horario-slot';
+            slot.textContent = timeStr;
+            slot.dataset.hora = timeStr;
+            var ocupado = verificarSolapamiento(fecha, timeStr, null);
+            if (ocupado) {
+                slot.classList.add('ocupado');
+            } else {
+                slot.classList.add('libre');
+                slot.onclick = function() { seleccionarHoraDesdeVisualizador(this.dataset.hora); };
+            }
+            if (timeStr === horaActual) { slot.classList.add('seleccionado'); }
+            grid.appendChild(slot);
+        }
+    }
+}
+
+function seleccionarHoraDesdeVisualizador(hora) {
+    document.getElementById('t1').value = hora;
+    document.querySelectorAll('.horario-slot').forEach(function(slot) {
+        slot.classList.remove('seleccionado');
+        if (slot.dataset.hora === hora) slot.classList.add('seleccionado');
+    });
+    onFechaHoraChange();
+}
+
+function verificarSolapamiento(fecha, horaInicio, duracionMin, citaIdExcluir) {
+    if (!fecha || !horaInicio) return false;
+    var partes = horaInicio.split(':');
+    var minInicio = parseInt(partes[0]) * 60 + parseInt(partes[1]);
+    var minFin = minInicio + (duracionMin || 0);
+    var citasDia = citas.filter(function(c) { return c.fecha === fecha && c.id !== citaIdExcluir; });
+    for (var i = 0; i < citasDia.length; i++) {
+        var partesCita = citasDia[i].hora.split(':');
+        var citaInicio = parseInt(partesCita[0]) * 60 + parseInt(partesCita[1]);
+        var citaFin = citaInicio + parseInt(citasDia[i].duracion);
+        if (minInicio < citaFin && (minFin === 0 || minFin > citaInicio)) return true;
+    }
+    return false;
+}
+
+function onFechaHoraChange() {
+    var fecha = document.getElementById('d1').value;
+    var hora = document.getElementById('t1').value;
+    var selectCliente = document.getElementById('c1');
+    if (fecha) mostrarVisualizadorHorarios(fecha);
+    else { document.getElementById('visualizador-horarios').style.display = 'none'; }
+    if (fecha && hora) {
+        if (verificarSolapamiento(fecha, hora, null)) {
+            document.getElementById('mensaje-solapamiento').textContent = 'Ya existe una cita a esta hora o en un horario cercano';
+            document.getElementById('alerta-solapamiento').classList.add('visible');
+            selectCliente.disabled = true;
+            return;
+        }
+        document.getElementById('alerta-solapamiento').classList.remove('visible');
+        selectCliente.disabled = false;
+        if (selectCliente.options.length <= 1) {
+            selectCliente.innerHTML = '<option value="">Seleccionar cliente...</option>';
+            clientes.forEach(function(c) { selectCliente.innerHTML += '<option>' + c.nombre + '</option>'; });
+        }
+        selectCliente.options[0].text = 'Seleccionar cliente...';
+    } else {
+        selectCliente.disabled = true;
+        selectCliente.value = '';
+        document.getElementById('sv1').disabled = true;
+        document.getElementById('sv1').value = '';
+        resetearDesdeDuracion();
+        document.getElementById('aviso-fidelidad').style.display = 'none';
+    }
+}
+
+function onClienteChange() {
+    var clienteNombre = document.getElementById('c1').value;
+    var selectServicio = document.getElementById('sv1');
+    if (clienteNombre) {
+        selectServicio.disabled = false;
+        selectServicio.options[0].text = 'Seleccionar tipo de masaje...';
+        mostrarInfoFidelidad(clienteNombre);
+    } else {
+        selectServicio.disabled = true;
+        selectServicio.value = '';
+        resetearDesdeDuracion();
+    }
+}
+
+function onServicioChange() {
+    var servicio = document.getElementById('sv1').value;
+    if (servicio) {
+        document.getElementById('duracion-container').classList.remove('deshabilitado');
+        document.getElementById('duracion-container').classList.add('activo');
+        document.querySelectorAll('input[name="duracion"]').forEach(function(r) { r.disabled = false; });
+        if (!document.querySelector('input[name="duracion"]:checked')) document.getElementById('dur60').checked = true;
+        calcularYMostrarPrecio();
+        activarCamposFinales();
+    } else { resetearDesdeDuracion(); }
+}
+
+function onDuracionChange() { calcularYMostrarPrecio(); activarCamposFinales(); }
+
+function calcularYMostrarPrecio() {
+    var servicio = document.getElementById('sv1').value;
+    var duracion = document.querySelector('input[name="duracion"]:checked').value;
+    if (!servicio) return;
+    var mapa = {'Masaje relajante': 'relajante', 'Masaje terapéutico': 'terapeutico', 'Masaje descontracturante': 'descontracturante', 'Masaje de Espalda': 'espalda', 'Masaje de Piernas': 'piernas', 'Masaje deportivo': 'deportivo', 'Reflexología podal (RTP)': 'rtp'};
+    var precio = tarifas[mapa[servicio] + '_' + duracion] || 0;
+    document.getElementById('precio-tarifa').textContent = precio.toFixed(2) + '€';
+    document.getElementById('info-precio').style.display = 'block';
+    document.getElementById('p1').value = precio.toFixed(2);
+}
+
+function activarCamposFinales() {
+    document.getElementById('p1').disabled = false;
+    document.getElementById('label-gratis').classList.remove('deshabilitado');
+    document.getElementById('label-gratis').classList.add('activo');
+    document.getElementById('esGratis').disabled = false;
+    document.getElementById('nt1').disabled = false;
+    document.getElementById('btn-cita').disabled = false;
+    document.getElementById('btn-cita').textContent = 'Guardar Cita';
+}
+
+function resetearDesdeDuracion() {
+    document.getElementById('duracion-container').classList.add('deshabilitado');
+    document.getElementById('duracion-container').classList.remove('activo');
+    document.querySelectorAll('input[name="duracion"]').forEach(function(r) { r.disabled = true; });
+    document.getElementById('p1').disabled = true;
+    document.getElementById('p1').value = '';
+    document.getElementById('label-gratis').classList.add('deshabilitado');
+    document.getElementById('label-gratis').classList.remove('activo');
+    document.getElementById('esGratis').disabled = true;
+    document.getElementById('esGratis').checked = false;
+    document.getElementById('nt1').disabled = true;
+    document.getElementById('btn-cita').disabled = true;
+    document.getElementById('btn-cita').textContent = 'Completa todos los campos para guardar';
+    document.getElementById('info-precio').style.display = 'none';
+}
+
+// ===== FIDELIZACIÓN =====
+function mostrarInfoFidelidad(clienteNombre) {
+    var avisoDiv = document.getElementById('aviso-fidelidad');
+    var cliente = clientes.find(function(c) { return c.nombre === clienteNombre; });
+    if (!cliente) { avisoDiv.style.display = 'none'; return; }
+    var puntos = cliente.puntosFidelidad || 0;
+    var gratis = cliente.masajesGratis || 0;
+    var restantes = 10 - (puntos % 10);
+    var tieneDerecho = restantes === 10 && puntos > 0;
+    var html = '<div class="alerta-regalo"><div class="icono">🎁</div><div class="texto"><strong>' + cliente.nombre + '</strong><br>';
+    html += 'Puntos: <strong>' + puntos.toFixed(1) + '</strong> | Gratis: <strong>' + gratis + '</strong><br>';
+    if (tieneDerecho) {
+        html += '<span style="color:#f59e0b;font-weight:bold;">¡TIENE DERECHO A 1 MASAJE GRATIS!</span>';
+    } else {
+        html += 'Faltan <strong>' + restantes.toFixed(1) + ' puntos</strong> para el siguiente gratis';
+        html += '<div class="progress-bar"><div class="fill" style="width:' + ((puntos % 10) * 10) + '%"></div></div>';
+    }
+    html += '</div></div>';
+    avisoDiv.innerHTML = html;
+    avisoDiv.style.display = 'block';
+}
+
+function mostrarFichaFidelidad(clienteId) {
+    var cliente = clientes.find(function(c) { return c.id === clienteId; });
+    if (!cliente) return;
+    var puntos = cliente.puntosFidelidad || 0;
+    var gratis = cliente.masajesGratis || 0;
+    var restantes = 10 - (puntos % 10);
+    var tieneDerecho = restantes === 10 && puntos > 0;
+    var progreso = (puntos % 10) * 10;
+    var html = '<h4 style="margin-top:0;">' + cliente.nombre + '</h4>';
+    html += '<div class="info-fidelidad">';
+    html += '<div class="stat"><div class="numero">' + puntos.toFixed(1) + '</div><div class="etiqueta">Puntos Acumulados</div></div>';
+    html += '<div class="stat"><div class="numero">' + gratis + '</div><div class="etiqueta">Masajes Gratis</div></div>';
+    html += '<div class="stat"><div class="numero">' + (tieneDerecho ? 0 : restantes.toFixed(1)) + '</div><div class="etiqueta">Faltan para Gratis</div></div>';
+    html += '</div>';
+    html += '<div style="margin-top:15px;"><strong>Progreso:</strong>';
+    html += '<div class="progress-bar"><div class="fill ' + (tieneDerecho ? 'completo' : '') + '" style="width:' + (tieneDerecho ? 100 : progreso) + '%"></div></div></div>';
+    if (tieneDerecho) {
+        html += '<div style="margin-top:15px;padding:15px;background:#fef3c7;border-radius:8px;text-align:center;">';
+        html += '<strong style="color:#92400e;font-size:1.1rem;">🎉 ¡TIENE DERECHO A 1 MASAJE GRATIS!</strong><br>';
+        html += '<button class="btn-regalo" onclick="canjearMasajeGratis(\'' + clienteId + '\')" style="margin-top:10px;padding:10px 20px;font-size:16px;">🎁 Canjear Masaje Gratis</button>';
+        html += '</div>';
+    }
+    document.getElementById('contenido-fidelidad').innerHTML = html;
+    document.getElementById('ficha-fidelidad').style.display = 'block';
+    document.getElementById('ficha-fidelidad').scrollIntoView({ behavior: 'smooth' });
+}
+
+function canjearMasajeGratis(clienteId) {
+    var cliente = clientes.find(function(c) { return c.id === clienteId; });
+    if (!cliente) return;
+    if (cliente.puntosFidelidad < 10) {
+        alert('❌ Este cliente aún no tiene derecho. Le faltan ' + (10 - cliente.puntosFidelidad).toFixed(1) + ' puntos.');
+        return;
+    }
+    if (confirm('¿Canjear 1 masaje gratis para ' + cliente.nombre + '?')) {
+        db.collection('clientes').doc(clienteId).update({
+            masajesGratis: (cliente.masajesGratis || 0) + 1,
+            puntosFidelidad: 0
+        });
+        mostrarEstado('🎁 Masaje gratis canjeado', 3000);
+    }
+}
+
+function getPuntosPorDuracion(duracion) { return duracion == 60 ? 1 : (duracion == 90 ? 1.5 : 2); }
+
+// ===== GUARDAR DATOS EN FIREBASE =====
+function guardarCliente(e) {
+    e.preventDefault();
+    var datos = { 
+        nombre: document.getElementById('nm1').value, 
+        telefono: document.getElementById('ph1').value, 
+        email: document.getElementById('em1').value, 
+        notas: document.getElementById('nt2').value,
+        puntosFidelidad: editandoCliente ? (clientes.find(function(c) { return c.id === editandoCliente; }).puntosFidelidad || 0) : 0,
+        masajesGratis: editandoCliente ? (clientes.find(function(c) { return c.id === editandoCliente; }).masajesGratis || 0) : 0
+    };
+    if (editandoCliente) {
+        db.collection('clientes').doc(editandoCliente).update(datos);
+    } else {
+        db.collection('clientes').add(datos);
+    }
+    cancelarEdicionCliente(); 
+    mostrarEstado('✅ Cliente guardado en la nube', 2000);
+}
+
+function guardarCita(e) {
+    e.preventDefault();
+    var fecha = document.getElementById('d1').value;
+    var hora = document.getElementById('t1').value;
+    var duracion = document.querySelector('input[name="duracion"]:checked').value;
+    var esGratis = document.getElementById('esGratis').checked;
+    var clienteNombre = document.getElementById('c1').value;
+    var puntos = getPuntosPorDuracion(duracion);
+    if (verificarSolapamiento(fecha, hora, parseInt(duracion), editandoCita)) {
+        alert('❌ Error: Ya existe una cita en ese horario.');
+        return;
+    }
+    var datos = { 
+        fecha: fecha, hora: hora, cliente: clienteNombre, 
+        servicio: document.getElementById('sv1').value, 
+        duracion: duracion, 
+        precio: parseFloat(document.getElementById('p1').value) || 0, 
+        cobrado: false, esGratis: esGratis,
+        notas: document.getElementById('nt1').value 
+    };
+    if (editandoCita) {
+        db.collection('citas').doc(editandoCita).update(datos);
+    } else {
+        db.collection('citas').add(datos);
+        if (clienteNombre && !esGratis) {
+            var cliente = clientes.find(function(c) { return c.nombre === clienteNombre; });
+            if (cliente) {
+                var nuevosPuntos = (cliente.puntosFidelidad || 0) + puntos;
+                db.collection('clientes').doc(cliente.id).update({puntosFidelidad: nuevosPuntos});
+                if (nuevosPuntos >= 10 && (nuevosPuntos - puntos) < 10) {
+                    setTimeout(function() { alert('🎉 ¡' + cliente.nombre + ' ha alcanzado los 10 puntos!'); }, 500);
+                }
+            }
+        }
+    }
+    cancelarEdicionCita(); 
+    mostrarEstado('✅ Cita guardada en la nube', 2000);
+}
+
+function eliminarCliente(id) { 
+    if(confirm('¿Eliminar este cliente?')) { 
+        db.collection('clientes').doc(id).delete();
+        mostrarEstado('🗑️ Cliente eliminado', 2000); 
+    } 
+}
+
+function eliminarCita(id) { 
+    if(confirm('¿Eliminar esta cita?')) { 
+        db.collection('citas').doc(id).delete();
+        mostrarEstado('🗑️ Cita eliminada', 2000); 
+    } 
+}
+
+function eliminarCobro(id) { 
+    if(confirm('¿Eliminar este cobro?')) { 
+        db.collection('cobros').doc(id).delete();
+        mostrarEstado('🗑️ Cobro eliminado', 2000); 
+    } 
+}
+
+function editarCliente(id) {
+    var c = clientes.find(function(x) { return x.id === id; }); 
+    if (!c) return;
+    editandoCliente = id;
+    document.getElementById('nm1').value = c.nombre; 
+    document.getElementById('ph1').value = c.telefono; 
+    document.getElementById('em1').value = c.email || ''; 
+    document.getElementById('nt2').value = c.notas || '';
+    document.getElementById('btn-cliente').textContent = 'Actualizar Cliente'; 
+    document.getElementById('btn-cancelar-cliente').style.display = 'inline-block'; 
+    document.getElementById('card-cliente').classList.add('editando'); 
+    mostrarFichaFidelidad(id);
+    window.scrollTo(0, 0);
+}
+
+function editarCita(id) {
+    var c = citas.find(function(x) { return x.id === id; }); 
+    if (!c) return;
+    editandoCita = id;
+    document.getElementById('d1').value = c.fecha; 
+    document.getElementById('t1').value = c.hora; 
+    document.getElementById('c1').value = c.cliente; 
+    document.getElementById('sv1').value = c.servicio;
+    document.getElementById('dur' + c.duracion).checked = true;
+    document.getElementById('p1').value = c.precio || ''; 
+    document.getElementById('nt1').value = c.notas || '';
+    document.getElementById('esGratis').checked = c.esGratis || false;
+    document.getElementById('c1').disabled = false;
+    document.getElementById('sv1').disabled = false;
+    document.getElementById('duracion-container').classList.remove('deshabilitado');
+    document.getElementById('duracion-container').classList.add('activo');
+    document.querySelectorAll('input[name="duracion"]').forEach(function(r) { r.disabled = false; });
+    document.getElementById('p1').disabled = false;
+    document.getElementById('label-gratis').classList.remove('deshabilitado');
+    document.getElementById('label-gratis').classList.add('activo');
+    document.getElementById('esGratis').disabled = false;
+    document.getElementById('nt1').disabled = false;
+    document.getElementById('btn-cita').disabled = false;
+    document.getElementById('btn-cita').textContent = 'Actualizar Cita';
+    document.getElementById('btn-cancelar-cita').style.display = 'inline-block'; 
+    document.getElementById('card-cita').classList.add('editando'); 
+    window.scrollTo(0, 0);
+    calcularYMostrarPrecio();
+    mostrarVisualizadorHorarios(c.fecha);
+}
+
+function cancelarEdicionCliente() { 
+    editandoCliente = null; 
+    document.getElementById('f2').reset(); 
+    document.getElementById('btn-cliente').textContent = 'Guardar Cliente'; 
+    document.getElementById('btn-cancelar-cliente').style.display = 'none'; 
+    document.getElementById('card-cliente').classList.remove('editando'); 
+    document.getElementById('ficha-fidelidad').style.display = 'none';
+}
+
+function cancelarEdicionCita() { 
+    editandoCita = null; 
+    document.getElementById('f1').reset(); 
+    document.getElementById('d1').valueAsDate = new Date(); 
+    document.querySelector('input[name="duracion"][value="60"]').checked = true; 
+    document.getElementById('info-precio').style.display = 'none'; 
+    document.getElementById('aviso-fidelidad').style.display = 'none';
+    document.getElementById('esGratis').checked = false;
+    document.getElementById('btn-cita').textContent = 'Guardar Cita'; 
+    document.getElementById('btn-cancelar-cita').style.display = 'none'; 
+    document.getElementById('card-cita').classList.remove('editando');
+    document.getElementById('c1').disabled = true;
+    document.getElementById('c1').value = '';
+    document.getElementById('sv1').disabled = true;
+    document.getElementById('sv1').value = '';
+    resetearDesdeDuracion();
+    document.getElementById('visualizador-horarios').style.display = 'none';
+    document.getElementById('alerta-solapamiento').classList.remove('visible');
+}
+
+// ===== ACTUALIZAR VISTAS =====
+function actualizar() {
+    document.getElementById('n1').textContent = clientes.length;
+    var hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('n2').textContent = citas.filter(function(c) { return c.fecha === hoy; }).length;
+    var cobrosHoy = cobros.filter(function(c) { return c.fecha === hoy; });
+    var totalCobrosHoy = 0; cobrosHoy.forEach(function(c) { totalCobrosHoy += c.importe; });
+    document.getElementById('n4').textContent = totalCobrosHoy.toFixed(2) + '€';
+    var html2 = ''; 
+    var sorted = citas.slice().sort(function(a, b) { return new Date(a.fecha + 'T' + a.hora) - new Date(b.fecha + 'T' + b.hora); });
+    sorted.forEach(function(c) {
+        var estado = c.cobrado ? '<span style="background:#d1fae5;color:#065f46;padding:4px 8px;border-radius:4px;font-size:12px;">✓ Cobrado</span>' : '<span style="background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:4px;font-size:12px;">⏳ Pendiente</span>';
+        var btnCobrar = c.cobrado ? '' : '<button class="btn-cobrar" onclick="cobrarCita(\'' + c.id + '\')">Cobrar</button>';
+        var gratisTag = c.esGratis ? ' <span style="background:#f59e0b;color:white;padding:2px 6px;border-radius:4px;font-size:11px;">GRATIS</span>' : '';
+        html2 += '<tr class="' + (c.cobrado ? 'cobrado' : 'pendiente-pago') + '"><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + ' (' + c.duracion + ' min)' + gratisTag + '</td><td>' + c.duracion + ' min</td><td>' + (c.precio ? c.precio.toFixed(2) + '€' : '-') + '</td><td>' + estado + '</td><td>' + btnCobrar + '<button class="btn-editar" onclick="editarCita(\'' + c.id + '\')">Editar</button><button class="btn-eliminar" onclick="eliminarCita(\'' + c.id + '\')">Eliminar</button></td></tr>';
+    });
+    document.getElementById('tb1').innerHTML = html2;
+    var prox = sorted.find(function(c) { return new Date(c.fecha + 'T' + c.hora) >= new Date(); });
+    document.getElementById('n3').textContent = prox ? (prox.cliente + ' (' + prox.fecha + ' ' + prox.hora + ')') : 'Ninguna';
+    var hd = ''; sorted.slice(0, 5).forEach(function(c) { hd += '<div style="padding:10px;background:#f9fafb;margin:5px 0;border-radius:4px;"><strong>' + c.cliente + '</strong> - ' + c.servicio + ' (' + c.fecha + ' ' + c.hora + ')</div>'; });
+    document.getElementById('dc').innerHTML = hd || '<p>No hay citas</p>';
+}
+
+function actualizarTablaClientes() {
+    var lista = clientesFiltrados.length > 0 ? clientesFiltrados : clientes;
+    var html1 = '';
+    var sel = '<option value="">Cliente...</option>';
+    var selCobro = '<option value="">Cliente (opcional)...</option>';
+    lista.forEach(function(c) {
+        var puntos = c.puntosFidelidad || 0;
+        var gratis = c.masajesGratis || 0;
+        var restantes = 10 - (puntos % 10);
+        var tieneDerecho = restantes === 10 && puntos > 0;
+        var badge = '';
+        if (tieneDerecho) { badge = '<span class="badge-fidelidad listo">🎁 GRATIS</span>'; } 
+        else if (restantes <= 3) { badge = '<span class="badge-fidelidad cerca">' + restantes.toFixed(1) + ' pts</span>'; } 
+        else { badge = '<span class="badge-fidelidad normal">' + puntos.toFixed(1) + ' pts</span>'; }
+        html1 += '<tr><td><strong>' + c.nombre + '</strong>' + badge + '</td><td>' + c.telefono + '</td><td>' + (c.email || '-') + '</td><td style="text-align:center;"><strong>' + puntos.toFixed(1) + '</strong></td><td style="text-align:center;"><strong style="color:#f59e0b;">' + gratis + '</strong></td><td><button class="btn-editar" onclick="editarCliente(\'' + c.id + '\')">Editar</button><button class="btn-editar" onclick="mostrarFichaFidelidad(\'' + c.id + '\')" style="background:#f59e0b;">🎁 Fidelidad</button><button class="btn-eliminar" onclick="eliminarCliente(\'' + c.id + '\')">Eliminar</button></td></tr>';
+        sel += '<option>' + c.nombre + '</option>';
+        selCobro += '<option>' + c.nombre + '</option>';
+    });
+    document.getElementById('tb2').innerHTML = html1 || '<tr><td colspan="6" style="text-align:center;">No hay clientes</td></tr>';
+    document.getElementById('c1').innerHTML = sel;
+    document.getElementById('cb4').innerHTML = selCobro;
+}
+
+function filtrarClientes() {
+    var texto = document.getElementById('busqueda-clientes').value.toLowerCase().trim();
+    if (!texto) { clientesFiltrados = []; } 
+    else {
+        clientesFiltrados = clientes.filter(function(c) {
+            return (c.nombre || '').toLowerCase().includes(texto) || (c.telefono || '').includes(texto);
+        });
+    }
+    document.getElementById('contador-resultados').textContent = (clientesFiltrados.length || clientes.length) + ' clientes';
+    actualizarTablaClientes();
+}
+
+function actualizarCaja() {
+    var hoy = new Date().toISOString().split('T')[0];
+    var total = 0, ef = 0, tar = 0;
+    cobros.forEach(function(c) { 
+        if (c.fecha === hoy) {
+            total += c.importe; 
+            if (c.metodo === 'Efectivo') ef += c.importe; 
+            else if (c.metodo === 'Tarjeta') tar += c.importe; 
+        }
+    });
+    var pendiente = 0; 
+    citas.forEach(function(c) { if (!c.cobrado && c.precio > 0) pendiente += c.precio; });
+    document.getElementById('caja-hoy').textContent = total.toFixed(2) + '€';
+    document.getElementById('caja-efectivo').textContent = ef.toFixed(2) + '€';
+    document.getElementById('caja-tarjeta').textContent = tar.toFixed(2) + '€';
+    document.getElementById('caja-pendiente').textContent = pendiente.toFixed(2) + '€';
+    var html = ''; 
+    cobros.slice().sort(function(a, b) { return new Date(b.fecha) - new Date(a.fecha); }).forEach(function(c) { 
+        html += '<tr><td>' + c.fecha + '</td><td style="font-weight:bold;color:#10b981;">' + c.importe.toFixed(2) + '€</td><td>' + c.metodo + '</td><td>' + (c.cliente || '-') + '</td><td>' + (c.concepto || '-') + '</td><td><button class="btn-eliminar" onclick="eliminarCobro(\'' + c.id + '\')">Eliminar</button></td></tr>'; 
+    });
+    document.getElementById('tb3').innerHTML = html || '<tr><td colspan="6" style="text-align:center;">No hay cobros</td></tr>';
+}
+
+function cobrarCita(id) {
+    var c = citas.find(function(x) { return x.id === id; });
+    if (!c) return;
+    cobroPendiente = c;
+    metodoSeleccionado = null;
+    document.getElementById('modal-cliente-info').innerHTML = '<strong>' + c.cliente + '</strong><br>' + c.servicio + ' (' + c.duracion + ' min)';
+    document.getElementById('modal-importe').textContent = c.precio.toFixed(2) + '€';
+    document.querySelectorAll('.metodo-pago').forEach(function(el) { el.classList.remove('selected'); });
+    document.getElementById('modal-cobro').classList.add('visible');
+}
+
+function seleccionarMetodo(metodo, elemento) {
+    metodoSeleccionado = metodo;
+    document.querySelectorAll('.metodo-pago').forEach(function(el) { el.classList.remove('selected'); });
+    elemento.classList.add('selected');
+}
+
+function confirmarCobro() {
+    if (!cobroPendiente || !metodoSeleccionado) { alert('Selecciona un método de pago'); return; }
+    var c = cobroPendiente;
+    db.collection('cobros').add({
+        fecha: new Date().toISOString().split('T')[0],
+        importe: c.precio,
+        metodo: metodoSeleccionado,
+        cliente: c.cliente,
+        concepto: c.servicio + ' (' + c.duracion + ' min)' + (c.esGratis ? ' [GRATIS]' : ''),
+        notas: 'Cobro de cita del ' + c.fecha
+    });
+    db.collection('citas').doc(c.id).update({cobrado: true});
+    cerrarModalCobro();
+    mostrarEstado('✅ Cobro registrado', 2000);
+}
+
+function cerrarModalCobro() {
+    document.getElementById('modal-cobro').classList.remove('visible');
+    cobroPendiente = null;
+    metodoSeleccionado = null;
+}
+
+function guardarTarifas() {
+    var nuevosPrecios = {};
+    var servicios = ['relajante', 'terapeutico', 'descontracturante', 'espalda', 'piernas', 'deportivo', 'rtp'];
+    var duraciones = ['60', '90', '120'];
+    servicios.forEach(function(serv) {
+        duraciones.forEach(function(dur) {
+            var inputId = 'precio_' + serv + '_' + dur;
+            nuevosPrecios[serv + '_' + dur] = parseFloat(document.getElementById(inputId).value) || 0;
+        });
+    });
+    db.collection('tarifas').doc('precios').set(nuevosPrecios);
+    mostrarEstado('✅ Tarifas actualizadas en la nube', 2000);
+}
+
+function cargarTarifasEnFormulario() {
+    var servicios = ['relajante', 'terapeutico', 'descontracturante', 'espalda', 'piernas', 'deportivo', 'rtp'];
+    var duraciones = ['60', '90', '120'];
+    servicios.forEach(function(serv) {
+        duraciones.forEach(function(dur) {
+            var inputId = 'precio_' + serv + '_' + dur;
+            document.getElementById(inputId).value = tarifas[serv + '_' + dur] || 0;
+        });
+    });
+}
+
+function cargarTarifasPorDefecto() {
+    if (confirm('¿Restaurar precios por defecto?')) {
+        db.collection('tarifas').doc('precios').set(tarifasPorDefecto);
+        mostrarEstado('✅ Precios restaurados', 2000);
+    }
+}
+
+function actualizarListadoMasajes() {
+    var fInicio = document.getElementById('filtro-fecha-inicio').value;
+    var fFin = document.getElementById('filtro-fecha-fin').value;
+    var cliente = document.getElementById('filtro-cliente').value;
+    var servicio = document.getElementById('filtro-servicio').value;
+    var busqueda = document.getElementById('busqueda-masajes').value.toLowerCase();
+    var sel = document.getElementById('filtro-cliente');
+    if (sel.options.length <= 1) { clientes.forEach(function(c) { sel.innerHTML += '<option>' + c.nombre + '</option>'; }); }
+    var filtradas = citas.filter(function(c) {
+        if (fInicio && c.fecha < fInicio) return false;
+        if (fFin && c.fecha > fFin) return false;
+        if (cliente && c.cliente !== cliente) return false;
+        if (servicio && c.servicio !== servicio) return false;
+        if (busqueda && !(c.fecha + ' ' + c.hora + ' ' + c.cliente + ' ' + c.servicio).toLowerCase().includes(busqueda)) return false;
+        return true;
+    }).sort(function(a, b) { return new Date(a.fecha + 'T' + a.hora) - new Date(b.fecha + 'T' + b.hora); });
+    var html = '';
+    filtradas.forEach(function(c) {
+        var cobro = cobros.find(function(cb) { return cb.cliente === c.cliente && cb.concepto.includes(c.servicio) && cb.fecha === c.fecha; });
+        var metodo = cobro ? cobro.metodo : '-';
+        var estado = c.cobrado ? '<span style="color:#10b981;">✓</span>' : '<span style="color:#f59e0b;">⏳</span>';
+        html += '<tr><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + '</td><td>' + c.duracion + ' min</td><td>' + c.precio.toFixed(2) + '€</td><td>' + metodo + '</td><td>' + estado + '</td></tr>';
+    });
+    document.getElementById('tb-listado-masajes').innerHTML = html || '<tr><td colspan="8" style="text-align:center;">Sin resultados</td></tr>';
+}
+
+function cambiarGrafico() {
+    document.getElementById('filtro-dia').style.display = document.getElementById('grafico-periodo').value === 'dia' ? 'block' : 'none';
+    document.getElementById('filtro-mes').style.display = document.getElementById('grafico-periodo').value === 'mes' ? 'flex' : 'none';
+    document.getElementById('filtro-anio').style.display = document.getElementById('grafico-periodo').value === 'año' ? 'block' : 'none';
+    actualizarGraficos();
+}
+
+function inicializarGraficos() {
+    var anio = new Date().getFullYear();
+    document.getElementById('grafico-anio').innerHTML = ''; 
+    document.getElementById('grafico-anio2').innerHTML = '';
+    for (var i = anio; i >= anio - 5; i--) {
+        document.getElementById('grafico-anio').innerHTML += '<option value="' + i + '">' + i + '</option>';
+        document.getElementById('grafico-anio2').innerHTML += '<option value="' + i + '">' + i + '</option>';
+    }
+    document.getElementById('grafico-mes').value = new Date().getMonth();
+    document.getElementById('grafico-fecha').valueAsDate = new Date();
+    actualizarGraficos();
+}
+
+function actualizarGraficos() {
+    var periodo = document.getElementById('grafico-periodo').value;
+    var ctx1 = document.getElementById('graficoIngresos').getContext('2d');
+    var ctx2 = document.getElementById('graficoMetodos').getContext('2d');
+    var labels = [], valores = [], mLabels = ['Efectivo', 'Tarjeta', 'Bizum', 'Transferencia'], mValores = [0, 0, 0, 0];
+    if (periodo === 'mes') {
+        var mes = parseInt(document.getElementById('grafico-mes').value), anio = parseInt(document.getElementById('grafico-anio').value), dias = new Date(anio, mes + 1, 0).getDate();
+        for (var d = 1; d <= dias; d++) { 
+            labels.push(d); 
+            var fStr = anio + '-' + String(mes + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0'); 
+            var total = 0; 
+            cobros.filter(function(c) { return c.fecha === fStr; }).forEach(function(c) { 
+                total += c.importe; 
+                if(c.metodo==='Efectivo') mValores[0]+=c.importe; else if(c.metodo==='Tarjeta') mValores[1]+=c.importe; else if(c.metodo==='Bizum') mValores[2]+=c.importe; else if(c.metodo==='Transferencia') mValores[3]+=c.importe; 
+            }); 
+            valores.push(total); 
+        }
+    } else if (periodo === 'año') {
+        var anio2 = parseInt(document.getElementById('grafico-anio2').value), meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        for (var m = 0; m < 12; m++) { 
+            labels.push(meses[m]); 
+            var total = 0; 
+            cobros.filter(function(c) { var fc = new Date(c.fecha); return fc.getFullYear() === anio2 && fc.getMonth() === m; }).forEach(function(c) { 
+                total += c.importe; 
+                if(c.metodo==='Efectivo') mValores[0]+=c.importe; else if(c.metodo==='Tarjeta') mValores[1]+=c.importe; else if(c.metodo==='Bizum') mValores[2]+=c.importe; else if(c.metodo==='Transferencia') mValores[3]+=c.importe; 
+            }); 
+            valores.push(total); 
+        }
+    }
+    if (graficoIngresos) graficoIngresos.destroy(); 
+    if (graficoMetodos) graficoMetodos.destroy();
+    graficoIngresos = new Chart(ctx1, { type: periodo === 'dia' ? 'bar' : 'line', data: { labels: labels, datasets: [{ label: 'Ingresos (€)', data: valores, backgroundColor: 'rgba(13, 148, 136, 0.5)', borderColor: '#0d9488', borderWidth: 2, fill: true }] }, options: { responsive: true, maintainAspectRatio: false } });
+    graficoMetodos = new Chart(ctx2, { type: 'doughnut', data: { labels: mLabels, datasets: [{ data: mValores, backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+}
+
+function mostrarEstado(mensaje, duracion) { 
+    var el = document.getElementById('estado'); 
+    el.textContent = mensaje; 
+    el.classList.add('visible'); 
+    setTimeout(function() { el.classList.remove('visible'); }, duracion); 
+}
+
+// ===== INICIALIZACIÓN =====
+window.onload = function() {
+    actualizarReloj();
+    setInterval(actualizarReloj, 1000);
+    iniciarSincronizacion();
+    document.getElementById('d1').valueAsDate = new Date();
+    document.getElementById('cb1').valueAsDate = new Date();
+    document.getElementById('f2').onsubmit = guardarCliente;
+    document.getElementById('f1').onsubmit = guardarCita;
+    document.getElementById('f3').onsubmit = function(e) {
+        e.preventDefault();
+        db.collection('cobros').add({ 
+            fecha: document.getElementById('cb1').value, 
+            importe: parseFloat(document.getElementById('cb2').value), 
+            metodo: document.getElementById('cb3').value, 
+            cliente: document.getElementById('cb4').value, 
+            concepto: document.getElementById('cb5').value, 
+            notas: document.getElementById('cb6').value 
+        });
+        this.reset(); 
+        document.getElementById('cb1').valueAsDate = new Date(); 
+        mostrarEstado('✅ Cobro registrado', 2000);
+    };
+    document.getElementById('t1').addEventListener('click', function(e) {
+        if (!this.disabled && document.getElementById('d1').value) abrirSelectorHoras();
+    });
+    document.getElementById('modal-cobro').addEventListener('click', function(e) { if (e.target === this) cerrarModalCobro(); });
+    document.getElementById('p1').addEventListener('input', function() {
+        var btn = document.getElementById('btn-cita');
+        btn.disabled = !(this.value && parseFloat(this.value) > 0);
+        btn.textContent = btn.disabled ? 'Introduce el precio' : 'Guardar Cita';
+    });
+};
 </script>
 <style>
 * { box-sizing: border-box; }
@@ -145,7 +798,7 @@ th { background: #f0fdfa; color: #0f766e; }
 .duracion-option:has(input[type="radio"]:checked) { background: #d1fae5; border-color: #0d9488; box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3); }
 .input-con-euro { position: relative; }
 .input-con-euro input { padding-left: 35px; }
-.input-con-euro::before { content: '\20AC'; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #0d9488; font-weight: bold; font-size: 16px; }
+.input-con-euro::before { content: '€'; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #0d9488; font-weight: bold; font-size: 16px; }
 .tabla-precios { width: 100%; border-collapse: collapse; margin-top: 15px; }
 .tabla-precios th, .tabla-precios td { padding: 12px; text-align: center; border: 1px solid #ddd; }
 .tabla-precios th { background: #0d9488; color: white; }
@@ -247,7 +900,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <button id="b1" class="active">📊 Resumen</button>
 <button id="b2">📅 Agenda</button>
 <button id="b3">👥 Clientes</button>
-<button id="b4">💰 Caja</button>
+<button id="b4"> Caja</button>
 <button id="b7">💵 Tarifas</button>
 </div>
 
@@ -277,7 +930,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <form id="f1">
 <input type="date" id="d1" required onchange="onFechaHoraChange()">
 <input type="time" id="t1" required onchange="onFechaHoraChange()">
-<p class="hora-hint">💡 Haz clic o doble clic en el campo de hora para ver las horas disponibles</p>
+<p class="hora-hint">💡 Haz clic en el campo de hora para ver las horas disponibles</p>
 <div id="visualizador-horarios" class="horario-visualizador" style="display:none;">
     <h4>📅 Horarios disponibles para <span id="fecha-seleccionada"></span></h4>
     <div class="horario-grid" id="horario-grid"></div>
@@ -346,7 +999,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div id="s3" class="section">
 <h2>Clientes</h2>
 <div class="busqueda-container">
-    <label>🔍 Buscar:</label>
+    <label> Buscar:</label>
     <input type="text" id="busqueda-clientes" placeholder="Escribe nombre, apellido o teléfono..." oninput="filtrarClientes()">
     <span class="contador-resultados" id="contador-resultados"></span>
 </div>
@@ -362,7 +1015,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </form>
 </div>
 <div id="ficha-fidelidad" class="card" style="display:none;">
-    <h3>🎁 Programa de Fidelización</h3>
+    <h3> Programa de Fidelización</h3>
     <div id="contenido-fidelidad"></div>
 </div>
 <div class="card">
@@ -426,7 +1079,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div class="card">
 <h3>📋 Listado de Masajes Realizados</h3>
 <div class="busqueda-rapida">
-    <input type="text" id="busqueda-masajes" placeholder="🔍 Buscar en el listado..." oninput="filtrarListadoMasajes()">
+    <input type="text" id="busqueda-masajes" placeholder="🔍 Buscar en el listado..." oninput="actualizarListadoMasajes()">
 </div>
 <div class="filtros-listado">
     <div><label>Fecha inicio:</label><input type="date" id="filtro-fecha-inicio" onchange="actualizarListadoMasajes()"></div>
@@ -494,12 +1147,12 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <td><div class="input-con-euro"><input type="number" id="precio_rtp_120" step="1" min="0" onchange="guardarTarifas()"></div></td></tr>
 </tbody>
 </table>
-<button class="btn" onclick="cargarTarifasPorDefecto()" style="background:#6b7280; margin-top:20px;">🔄 Restaurar precios por defecto</button>
+<button class="btn" onclick="cargarTarifasPorDefecto()" style="background:#6b7280; margin-top:20px;"> Restaurar precios por defecto</button>
 </div>
 </div>
 </div>
 
-<div id="estado" class="estado-guardado">💾 Guardado en la nube</div>
+<div id="estado" class="estado-guardado"> Guardado en la nube</div>
 
 <div id="modal-cobro" class="modal-overlay">
     <div class="modal-content">
@@ -510,8 +1163,8 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
         <div class="metodos-pago">
             <div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)"><span class="icono">💵</span><span class="nombre">Efectivo</span></div>
             <div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)"><span class="icono">💳</span><span class="nombre">Tarjeta</span></div>
-            <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)"><span class="icono">📱</span><span class="nombre">Bizum</span></div>
-            <div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"><span class="icono">🏦</span><span class="nombre">Transferencia</span></div>
+            <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)"><span class="icono"></span><span class="nombre">Bizum</span></div>
+            <div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"><span class="icono"></span><span class="nombre">Transferencia</span></div>
         </div>
         <div class="modal-botones">
             <button class="btn-cancelar" onclick="cerrarModalCobro()">Cancelar</button>
@@ -520,609 +1173,5 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
     </div>
 </div>
 
-<script>
-// El resto de funciones de lógica de negocio se mantienen, pero adaptadas a Firebase
-var diasSemana = ['Domingo', 'Lunes', 'Martes', 'Mi\u00e9rcoles', 'Jueves', 'Viernes', 'S\u00e1bado'];
-var mesesAnio = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-
-function actualizarReloj() {
-    var ahora = new Date();
-    var fechaStr = diasSemana[ahora.getDay()] + ', ' + ahora.getDate() + ' de ' + mesesAnio[ahora.getMonth()] + ' de ' + ahora.getFullYear();
-    var horaStr = String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0') + ':' + String(ahora.getSeconds()).padStart(2, '0');
-    document.getElementById('reloj-fecha').textContent = fechaStr;
-    document.getElementById('reloj-hora').textContent = horaStr;
-}
-
-document.getElementById('b1').onclick = function() { cambiar(1); };
-document.getElementById('b2').onclick = function() { cambiar(2); };
-document.getElementById('b3').onclick = function() { cambiar(3); actualizarTablaClientes(); };
-document.getElementById('b4').onclick = function() { cambiar(4); inicializarGraficos(); actualizarCaja(); actualizarListadoMasajes(); };
-document.getElementById('b7').onclick = function() { cambiar(5); cargarTarifasEnFormulario(); };
-
-document.getElementById('btn-cancelar-cliente').onclick = cancelarEdicionCliente;
-document.getElementById('btn-cancelar-cita').onclick = cancelarEdicionCita;
-
-function cambiar(n) {
-    for(var i=1; i<=5; i++) {
-        document.getElementById('s'+i).classList.remove('active');
-        var btn = document.getElementById('b'+i);
-        if(btn) btn.classList.remove('active');
-    }
-    document.getElementById('s' + n).classList.add('active');
-    document.getElementById('b' + n).classList.add('active');
-}
-
-// --- FUNCIONES DE BASE DE DATOS (FIREBASE) ---
-function guardarCliente(e) {
-    e.preventDefault();
-    var datos = { 
-        nombre: document.getElementById('nm1').value, 
-        telefono: document.getElementById('ph1').value, 
-        email: document.getElementById('em1').value, 
-        notas: document.getElementById('nt2').value,
-        puntosFidelidad: editandoCliente ? (clientes.find(function(c) { return c.id === editandoCliente; }).puntosFidelidad || 0) : 0,
-        masajesGratis: editandoCliente ? (clientes.find(function(c) { return c.id === editandoCliente; }).masajesGratis || 0) : 0
-    };
-    if (editandoCliente) {
-        db.collection('clientes').doc(editandoCliente).update(datos);
-    } else {
-        db.collection('clientes').add(datos);
-    }
-    cancelarEdicionCliente(); 
-    mostrarEstado('✅ Cliente guardado en la nube', 2000);
-}
-
-function guardarCita(e) {
-    e.preventDefault();
-    var fecha = document.getElementById('d1').value;
-    var hora = document.getElementById('t1').value;
-    var duracion = document.querySelector('input[name="duracion"]:checked').value;
-    var esGratis = document.getElementById('esGratis').checked;
-    var clienteNombre = document.getElementById('c1').value;
-    var puntos = getPuntosPorDuracion(duracion);
-    
-    if (verificarSolapamiento(fecha, hora, parseInt(duracion), editandoCita)) {
-        alert('❌ Error: Ya existe una cita en ese horario.');
-        return;
-    }
-    
-    var datos = { 
-        fecha: fecha, hora: hora, cliente: clienteNombre, 
-        servicio: document.getElementById('sv1').value, 
-        duracion: duracion, 
-        precio: parseFloat(document.getElementById('p1').value) || 0, 
-        cobrado: false, esGratis: esGratis,
-        notas: document.getElementById('nt1').value 
-    };
-    
-    if (editandoCita) {
-        db.collection('citas').doc(editandoCita).update(datos);
-    } else {
-        db.collection('citas').add(datos);
-        if (clienteNombre && !esGratis) {
-            var cliente = clientes.find(function(c) { return c.nombre === clienteNombre; });
-            if (cliente) {
-                var nuevosPuntos = (cliente.puntosFidelidad || 0) + puntos;
-                db.collection('clientes').doc(cliente.id).update({puntosFidelidad: nuevosPuntos});
-                if (nuevosPuntos >= 10 && (nuevosPuntos - puntos) < 10) {
-                    setTimeout(function() { alert('🎉 ¡' + cliente.nombre + ' ha alcanzado los 10 puntos!'); }, 500);
-                }
-            }
-        }
-    }
-    cancelarEdicionCita(); 
-    mostrarEstado('✅ Cita guardada en la nube', 2000);
-}
-
-function eliminarCliente(id) { 
-    if(confirm('¿Eliminar este cliente?')) { 
-        db.collection('clientes').doc(id).delete();
-        mostrarEstado('🗑️ Cliente eliminado', 2000); 
-    } 
-}
-
-function eliminarCita(id) { 
-    if(confirm('¿Eliminar esta cita?')) { 
-        db.collection('citas').doc(id).delete();
-        mostrarEstado('🗑️ Cita eliminada', 2000); 
-    } 
-}
-
-function eliminarCobro(id) { 
-    if(confirm('¿Eliminar este cobro?')) { 
-        db.collection('cobros').doc(id).delete();
-        mostrarEstado('🗑️ Cobro eliminado', 2000); 
-    } 
-}
-
-function guardarTarifas() {
-    var nuevosPrecios = {};
-    var servicios = ['relajante', 'terapeutico', 'descontracturante', 'espalda', 'piernas', 'deportivo', 'rtp'];
-    var duraciones = ['60', '90', '120'];
-    servicios.forEach(function(serv) {
-        duraciones.forEach(function(dur) {
-            var inputId = 'precio_' + serv + '_' + dur;
-            nuevosPrecios[serv + '_' + dur] = parseFloat(document.getElementById(inputId).value) || 0;
-        });
-    });
-    db.collection('tarifas').doc('precios').set(nuevosPrecios);
-    mostrarEstado('✅ Tarifas actualizadas en la nube', 2000);
-}
-
-function cargarTarifasEnFormulario() {
-    var servicios = ['relajante', 'terapeutico', 'descontracturante', 'espalda', 'piernas', 'deportivo', 'rtp'];
-    var duraciones = ['60', '90', '120'];
-    servicios.forEach(function(serv) {
-        duraciones.forEach(function(dur) {
-            var inputId = 'precio_' + serv + '_' + dur;
-            document.getElementById(inputId).value = tarifas[serv + '_' + dur] || 0;
-        });
-    });
-}
-
-function cargarTarifasPorDefecto() {
-    if (confirm('¿Restaurar precios por defecto?')) {
-        db.collection('tarifas').doc('precios').set(tarifasPorDefecto);
-        mostrarEstado('✅ Precios restaurados', 2000);
-    }
-}
-
-// --- RESTO DE FUNCIONES DE INTERFAZ (Sin cambios mayores, solo adaptadas) ---
-function mostrarEstado(mensaje, duracion) { 
-    var el = document.getElementById('estado'); 
-    el.textContent = mensaje; 
-    el.classList.add('visible'); 
-    setTimeout(function() { el.classList.remove('visible'); }, duracion); 
-}
-
-function actualizar() {
-    document.getElementById('n1').textContent = clientes.length;
-    var hoy = new Date().toISOString().split('T')[0];
-    document.getElementById('n2').textContent = citas.filter(function(c) { return c.fecha === hoy; }).length;
-    var cobrosHoy = cobros.filter(function(c) { return c.fecha === hoy; });
-    var totalCobrosHoy = 0; cobrosHoy.forEach(function(c) { totalCobrosHoy += c.importe; });
-    document.getElementById('n4').textContent = totalCobrosHoy.toFixed(2) + '€';
-    
-    var html2 = ''; 
-    var sorted = citas.slice().sort(function(a, b) { return new Date(a.fecha + 'T' + a.hora) - new Date(b.fecha + 'T' + b.hora); });
-    sorted.forEach(function(c) {
-        var estado = c.cobrado ? '<span style="background:#d1fae5;color:#065f46;padding:4px 8px;border-radius:4px;font-size:12px;">✓ Cobrado</span>' : '<span style="background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:4px;font-size:12px;">⏳ Pendiente</span>';
-        var btnCobrar = c.cobrado ? '' : '<button class="btn-cobrar" onclick="cobrarCita(\'' + c.id + '\')">Cobrar</button>';
-        var gratisTag = c.esGratis ? ' <span style="background:#f59e0b;color:white;padding:2px 6px;border-radius:4px;font-size:11px;">GRATIS</span>' : '';
-        html2 += '<tr class="' + (c.cobrado ? 'cobrado' : 'pendiente-pago') + '"><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + ' (' + c.duracion + ' min)' + gratisTag + '</td><td>' + c.duracion + ' min</td><td>' + (c.precio ? c.precio.toFixed(2) + '€' : '-') + '</td><td>' + estado + '</td><td>' + btnCobrar + '<button class="btn-editar" onclick="editarCita(\'' + c.id + '\')">Editar</button><button class="btn-eliminar" onclick="eliminarCita(\'' + c.id + '\')">Eliminar</button></td></tr>';
-    });
-    document.getElementById('tb1').innerHTML = html2;
-    
-    var prox = sorted.find(function(c) { return new Date(c.fecha + 'T' + c.hora) >= new Date(); });
-    document.getElementById('n3').textContent = prox ? (prox.cliente + ' (' + prox.fecha + ' ' + prox.hora + ')') : 'Ninguna';
-    
-    var hd = ''; sorted.slice(0, 5).forEach(function(c) { hd += '<div style="padding:10px;background:#f9fafb;margin:5px 0;border-radius:4px;"><strong>' + c.cliente + '</strong> - ' + c.servicio + ' (' + c.fecha + ' ' + c.hora + ')</div>'; });
-    document.getElementById('dc').innerHTML = hd || '<p>No hay citas</p>';
-}
-
-function actualizarTablaClientes() {
-    var lista = clientesFiltrados.length > 0 ? clientesFiltrados : clientes;
-    var html1 = '';
-    var sel = '<option value="">Cliente...</option>';
-    var selCobro = '<option value="">Cliente (opcional)...</option>';
-    lista.forEach(function(c) {
-        var puntos = c.puntosFidelidad || 0;
-        var gratis = c.masajesGratis || 0;
-        var restantes = 10 - (puntos % 10);
-        var tieneDerecho = restantes === 10 && puntos > 0;
-        var badge = tieneDerecho ? '<span class="badge-fidelidad listo">🎁 GRATIS</span>' : (restantes <= 3 ? '<span class="badge-fidelidad cerca">' + restantes + ' pts</span>' : '<span class="badge-fidelidad normal">' + puntos + ' pts</span>');
-        
-        html1 += '<tr><td><strong>' + c.nombre + '</strong>' + badge + '</td><td>' + c.telefono + '</td><td>' + (c.email || '-') + '</td><td style="text-align:center;"><strong>' + puntos + '</strong></td><td style="text-align:center;"><strong style="color:#f59e0b;">' + gratis + '</strong></td><td><button class="btn-editar" onclick="editarCliente(\'' + c.id + '\')">Editar</button><button class="btn-eliminar" onclick="eliminarCliente(\'' + c.id + '\')">Eliminar</button></td></tr>';
-        sel += '<option>' + c.nombre + '</option>';
-        selCobro += '<option>' + c.nombre + '</option>';
-    });
-    document.getElementById('tb2').innerHTML = html1 || '<tr><td colspan="6" style="text-align:center;">No hay clientes</td></tr>';
-    document.getElementById('c1').innerHTML = sel;
-    document.getElementById('cb4').innerHTML = selCobro;
-}
-
-function filtrarClientes() {
-    var texto = document.getElementById('busqueda-clientes').value.toLowerCase().trim();
-    if (!texto) { clientesFiltrados = []; } 
-    else {
-        clientesFiltrados = clientes.filter(function(c) {
-            return (c.nombre || '').toLowerCase().includes(texto) || (c.telefono || '').includes(texto);
-        });
-    }
-    document.getElementById('contador-resultados').textContent = (clientesFiltrados.length || clientes.length) + ' clientes';
-    actualizarTablaClientes();
-}
-
-function editarCliente(id) {
-    var c = clientes.find(function(x) { return x.id === id; }); 
-    if (!c) return;
-    editandoCliente = id;
-    document.getElementById('nm1').value = c.nombre; 
-    document.getElementById('ph1').value = c.telefono; 
-    document.getElementById('em1').value = c.email || ''; 
-    document.getElementById('nt2').value = c.notas || '';
-    document.getElementById('btn-cliente').textContent = 'Actualizar Cliente'; 
-    document.getElementById('btn-cancelar-cliente').style.display = 'inline-block'; 
-    document.getElementById('card-cliente').classList.add('editando'); 
-    window.scrollTo(0, 0);
-}
-
-function editarCita(id) {
-    var c = citas.find(function(x) { return x.id === id; }); 
-    if (!c) return;
-    editandoCita = id;
-    document.getElementById('d1').value = c.fecha; 
-    document.getElementById('t1').value = c.hora; 
-    document.getElementById('c1').value = c.cliente; 
-    document.getElementById('sv1').value = c.servicio;
-    document.getElementById('dur' + c.duracion).checked = true;
-    document.getElementById('p1').value = c.precio || ''; 
-    document.getElementById('nt1').value = c.notas || '';
-    document.getElementById('esGratis').checked = c.esGratis || false;
-    
-    document.getElementById('c1').disabled = false;
-    document.getElementById('sv1').disabled = false;
-    document.getElementById('duracion-container').classList.remove('deshabilitado');
-    document.getElementById('duracion-container').classList.add('activo');
-    document.querySelectorAll('input[name="duracion"]').forEach(function(r) { r.disabled = false; });
-    document.getElementById('p1').disabled = false;
-    document.getElementById('label-gratis').classList.remove('deshabilitado');
-    document.getElementById('label-gratis').classList.add('activo');
-    document.getElementById('esGratis').disabled = false;
-    document.getElementById('nt1').disabled = false;
-    document.getElementById('btn-cita').disabled = false;
-    document.getElementById('btn-cita').textContent = 'Actualizar Cita';
-    document.getElementById('btn-cancelar-cita').style.display = 'inline-block'; 
-    document.getElementById('card-cita').classList.add('editando'); 
-    window.scrollTo(0, 0);
-    calcularYMostrarPrecio();
-}
-
-function cancelarEdicionCliente() { 
-    editandoCliente = null; 
-    document.getElementById('f2').reset(); 
-    document.getElementById('btn-cliente').textContent = 'Guardar Cliente'; 
-    document.getElementById('btn-cancelar-cliente').style.display = 'none'; 
-    document.getElementById('card-cliente').classList.remove('editando'); 
-}
-
-function cancelarEdicionCita() { 
-    editandoCita = null; 
-    document.getElementById('f1').reset(); 
-    document.getElementById('d1').valueAsDate = new Date(); 
-    document.querySelector('input[name="duracion"][value="60"]').checked = true; 
-    document.getElementById('info-precio').style.display = 'none'; 
-    document.getElementById('aviso-fidelidad').style.display = 'none';
-    document.getElementById('esGratis').checked = false;
-    document.getElementById('btn-cita').textContent = 'Guardar Cita'; 
-    document.getElementById('btn-cancelar-cita').style.display = 'none'; 
-    document.getElementById('card-cita').classList.remove('editando');
-    document.getElementById('c1').disabled = true;
-    document.getElementById('c1').value = '';
-    document.getElementById('sv1').disabled = true;
-    document.getElementById('sv1').value = '';
-    resetearDesdeDuracion();
-}
-
-function onFechaHoraChange() {
-    var fecha = document.getElementById('d1').value;
-    var hora = document.getElementById('t1').value;
-    var selectCliente = document.getElementById('c1');
-    if (fecha && hora) {
-        if (verificarSolapamiento(fecha, hora, null)) {
-            document.getElementById('mensaje-solapamiento').textContent = 'Hora ocupada';
-            document.getElementById('alerta-solapamiento').classList.add('visible');
-            selectCliente.disabled = true;
-            return;
-        }
-        document.getElementById('alerta-solapamiento').classList.remove('visible');
-        selectCliente.disabled = false;
-        if (selectCliente.options.length <= 1) {
-            selectCliente.innerHTML = '<option value="">Seleccionar cliente...</option>';
-            clientes.forEach(function(c) { selectCliente.innerHTML += '<option>' + c.nombre + '</option>'; });
-        }
-        selectCliente.options[0].text = 'Seleccionar cliente...';
-    } else {
-        selectCliente.disabled = true;
-        selectCliente.value = '';
-        document.getElementById('sv1').disabled = true;
-        document.getElementById('sv1').value = '';
-        resetearDesdeDuracion();
-    }
-}
-
-function onClienteChange() {
-    var clienteNombre = document.getElementById('c1').value;
-    var selectServicio = document.getElementById('sv1');
-    if (clienteNombre) {
-        selectServicio.disabled = false;
-        selectServicio.options[0].text = 'Seleccionar tipo de masaje...';
-        mostrarInfoFidelidad(clienteNombre);
-    } else {
-        selectServicio.disabled = true;
-        selectServicio.value = '';
-        resetearDesdeDuracion();
-    }
-}
-
-function onServicioChange() {
-    var servicio = document.getElementById('sv1').value;
-    if (servicio) {
-        document.getElementById('duracion-container').classList.remove('deshabilitado');
-        document.getElementById('duracion-container').classList.add('activo');
-        document.querySelectorAll('input[name="duracion"]').forEach(function(r) { r.disabled = false; });
-        if (!document.querySelector('input[name="duracion"]:checked')) { document.getElementById('dur60').checked = true; }
-        calcularYMostrarPrecio();
-        activarCamposFinales();
-    } else {
-        resetearDesdeDuracion();
-    }
-}
-
-function onDuracionChange() { calcularYMostrarPrecio(); activarCamposFinales(); }
-
-function calcularYMostrarPrecio() {
-    var servicio = document.getElementById('sv1').value;
-    var duracion = document.querySelector('input[name="duracion"]:checked').value;
-    if (!servicio) return;
-    var mapa = {'Masaje relajante': 'relajante', 'Masaje terapéutico': 'terapeutico', 'Masaje descontracturante': 'descontracturante', 'Masaje de Espalda': 'espalda', 'Masaje de Piernas': 'piernas', 'Masaje deportivo': 'deportivo', 'Reflexología podal (RTP)': 'rtp'};
-    var precio = tarifas[mapa[servicio] + '_' + duracion] || 0;
-    document.getElementById('precio-tarifa').textContent = precio.toFixed(2) + '€';
-    document.getElementById('info-precio').style.display = 'block';
-    document.getElementById('p1').value = precio.toFixed(2);
-}
-
-function activarCamposFinales() {
-    document.getElementById('p1').disabled = false;
-    document.getElementById('label-gratis').classList.remove('deshabilitado');
-    document.getElementById('label-gratis').classList.add('activo');
-    document.getElementById('esGratis').disabled = false;
-    document.getElementById('nt1').disabled = false;
-    document.getElementById('btn-cita').disabled = false;
-    document.getElementById('btn-cita').textContent = 'Guardar Cita';
-}
-
-function resetearDesdeDuracion() {
-    document.getElementById('duracion-container').classList.add('deshabilitado');
-    document.getElementById('duracion-container').classList.remove('activo');
-    document.querySelectorAll('input[name="duracion"]').forEach(function(r) { r.disabled = true; });
-    document.getElementById('p1').disabled = true;
-    document.getElementById('p1').value = '';
-    document.getElementById('label-gratis').classList.add('deshabilitado');
-    document.getElementById('label-gratis').classList.remove('activo');
-    document.getElementById('esGratis').disabled = true;
-    document.getElementById('nt1').disabled = true;
-    document.getElementById('btn-cita').disabled = true;
-    document.getElementById('info-precio').style.display = 'none';
-}
-
-function mostrarInfoFidelidad(clienteNombre) {
-    var avisoDiv = document.getElementById('aviso-fidelidad');
-    var cliente = clientes.find(function(c) { return c.nombre === clienteNombre; });
-    if (!cliente) { avisoDiv.style.display = 'none'; return; }
-    var puntos = cliente.puntosFidelidad || 0;
-    var gratis = cliente.masajesGratis || 0;
-    var restantes = 10 - (puntos % 10);
-    var tieneDerecho = restantes === 10 && puntos > 0;
-    var html = '<div class="alerta-regalo"><div class="icono">🎁</div><div class="texto"><strong>' + cliente.nombre + '</strong><br>Puntos: <strong>' + puntos + '</strong> | Gratis: <strong>' + gratis + '</strong><br>';
-    html += tieneDerecho ? '<span style="color:#f59e0b;font-weight:bold;">¡TIENE DERECHO A 1 MASAJE GRATIS!</span>' : 'Faltan <strong>' + restantes + ' puntos</strong> para el siguiente gratis<div class="progress-bar"><div class="fill" style="width:' + ((puntos % 10) * 10) + '%"></div></div>';
-    html += '</div></div>';
-    avisoDiv.innerHTML = html;
-    avisoDiv.style.display = 'block';
-}
-
-function verificarSolapamiento(fecha, horaInicio, duracionMin, citaIdExcluir) {
-    if (!fecha || !horaInicio) return false;
-    var partes = horaInicio.split(':');
-    var minInicio = parseInt(partes[0]) * 60 + parseInt(partes[1]);
-    var minFin = minInicio + (duracionMin || 0);
-    var citasDia = citas.filter(function(c) { return c.fecha === fecha && c.id !== citaIdExcluir; });
-    for (var i = 0; i < citasDia.length; i++) {
-        var partesCita = citasDia[i].hora.split(':');
-        var citaInicio = parseInt(partesCita[0]) * 60 + parseInt(partesCita[1]);
-        var citaFin = citaInicio + parseInt(citasDia[i].duracion);
-        if (minInicio < citaFin && (minFin === 0 || minFin > citaInicio)) return true;
-    }
-    return false;
-}
-
-function getPuntosPorDuracion(duracion) { return duracion == 60 ? 1 : (duracion == 90 ? 1.5 : 2); }
-
-// Funciones de Caja y Gráficos (simplificadas para Firebase)
-function actualizarCaja() {
-    var hoy = new Date().toISOString().split('T')[0];
-    var total = 0, ef = 0, tar = 0;
-    cobros.forEach(function(c) { 
-        if (c.fecha === hoy) {
-            total += c.importe; 
-            if (c.metodo === 'Efectivo') ef += c.importe; 
-            else if (c.metodo === 'Tarjeta') tar += c.importe; 
-        }
-    });
-    var pendiente = 0; 
-    citas.forEach(function(c) { if (!c.cobrado && c.precio > 0) pendiente += c.precio; });
-    
-    document.getElementById('caja-hoy').textContent = total.toFixed(2) + '€';
-    document.getElementById('caja-efectivo').textContent = ef.toFixed(2) + '€';
-    document.getElementById('caja-tarjeta').textContent = tar.toFixed(2) + '€';
-    document.getElementById('caja-pendiente').textContent = pendiente.toFixed(2) + '€';
-    
-    var html = ''; 
-    cobros.slice().sort(function(a, b) { return new Date(b.fecha) - new Date(a.fecha); }).forEach(function(c) { 
-        html += '<tr><td>' + c.fecha + '</td><td style="font-weight:bold;color:#10b981;">' + c.importe.toFixed(2) + '€</td><td>' + c.metodo + '</td><td>' + (c.cliente || '-') + '</td><td>' + (c.concepto || '-') + '</td><td><button class="btn-eliminar" onclick="eliminarCobro(\'' + c.id + '\')">Eliminar</button></td></tr>'; 
-    });
-    document.getElementById('tb3').innerHTML = html || '<tr><td colspan="6" style="text-align:center;">No hay cobros</td></tr>';
-}
-
-function cobrarCita(id) {
-    var c = citas.find(function(x) { return x.id === id; });
-    if (!c) return;
-    cobroPendiente = c;
-    metodoSeleccionado = null;
-    document.getElementById('modal-cliente-info').innerHTML = '<strong>' + c.cliente + '</strong><br>' + c.servicio + ' (' + c.duracion + ' min)';
-    document.getElementById('modal-importe').textContent = c.precio.toFixed(2) + '€';
-    document.querySelectorAll('.metodo-pago').forEach(function(el) { el.classList.remove('selected'); });
-    document.getElementById('modal-cobro').classList.add('visible');
-}
-
-function seleccionarMetodo(metodo, elemento) {
-    metodoSeleccionado = metodo;
-    document.querySelectorAll('.metodo-pago').forEach(function(el) { el.classList.remove('selected'); });
-    elemento.classList.add('selected');
-}
-
-function confirmarCobro() {
-    if (!cobroPendiente || !metodoSeleccionado) { alert('Selecciona un método de pago'); return; }
-    var c = cobroPendiente;
-    db.collection('cobros').add({
-        fecha: new Date().toISOString().split('T')[0],
-        importe: c.precio,
-        metodo: metodoSeleccionado,
-        cliente: c.cliente,
-        concepto: c.servicio + ' (' + c.duracion + ' min)' + (c.esGratis ? ' [GRATIS]' : ''),
-        notas: 'Cobro de cita del ' + c.fecha
-    });
-    db.collection('citas').doc(c.id).update({cobrado: true});
-    cerrarModalCobro();
-    mostrarEstado('✅ Cobro registrado', 2000);
-}
-
-function cerrarModalCobro() {
-    document.getElementById('modal-cobro').classList.remove('visible');
-    cobroPendiente = null;
-    metodoSeleccionado = null;
-}
-document.getElementById('modal-cobro').addEventListener('click', function(e) { if (e.target === this) cerrarModalCobro(); });
-
-document.getElementById('f3').onsubmit = function(e) {
-    e.preventDefault();
-    db.collection('cobros').add({ 
-        fecha: document.getElementById('cb1').value, 
-        importe: parseFloat(document.getElementById('cb2').value), 
-        metodo: document.getElementById('cb3').value, 
-        cliente: document.getElementById('cb4').value, 
-        concepto: document.getElementById('cb5').value, 
-        notas: document.getElementById('cb6').value 
-    });
-    this.reset(); 
-    document.getElementById('cb1').valueAsDate = new Date(); 
-    mostrarEstado('✅ Cobro registrado', 2000);
-};
-
-document.getElementById('p1').addEventListener('input', function() {
-    var btn = document.getElementById('btn-cita');
-    btn.disabled = !(this.value && parseFloat(this.value) > 0);
-    btn.textContent = btn.disabled ? 'Introduce el precio' : 'Guardar Cita';
-});
-
-// Gráficos
-function cambiarGrafico() {
-    document.getElementById('filtro-dia').style.display = document.getElementById('grafico-periodo').value === 'dia' ? 'block' : 'none';
-    document.getElementById('filtro-mes').style.display = document.getElementById('grafico-periodo').value === 'mes' ? 'flex' : 'none';
-    document.getElementById('filtro-anio').style.display = document.getElementById('grafico-periodo').value === 'año' ? 'block' : 'none';
-    actualizarGraficos();
-}
-
-function inicializarGraficos() {
-    var anio = new Date().getFullYear();
-    document.getElementById('grafico-anio').innerHTML = ''; 
-    document.getElementById('grafico-anio2').innerHTML = '';
-    for (var i = anio; i >= anio - 5; i--) {
-        document.getElementById('grafico-anio').innerHTML += '<option value="' + i + '">' + i + '</option>';
-        document.getElementById('grafico-anio2').innerHTML += '<option value="' + i + '">' + i + '</option>';
-    }
-    document.getElementById('grafico-mes').value = new Date().getMonth();
-    document.getElementById('grafico-fecha').valueAsDate = new Date();
-    actualizarGraficos();
-}
-
-function actualizarGraficos() {
-    var periodo = document.getElementById('grafico-periodo').value;
-    var ctx1 = document.getElementById('graficoIngresos').getContext('2d');
-    var ctx2 = document.getElementById('graficoMetodos').getContext('2d');
-    var labels = [], valores = [], mLabels = ['Efectivo', 'Tarjeta', 'Bizum', 'Transferencia'], mValores = [0, 0, 0, 0];
-    
-    if (periodo === 'dia') {
-        var fecha = document.getElementById('grafico-fecha').value || new Date().toISOString().split('T')[0];
-        for (var h = 9; h <= 21; h++) { labels.push(h + ':00'); valores.push(0); }
-        cobros.filter(function(c) { return c.fecha === fecha; }).forEach(function(c) { 
-            var hora = parseInt(c.fecha ? 0 : 0); // Simplificado para el ejemplo
-            // Nota: Para gráfico por hora real, se necesita parsear la hora del cobro
-        });
-    } else if (periodo === 'mes') {
-        var mes = parseInt(document.getElementById('grafico-mes').value), anio = parseInt(document.getElementById('grafico-anio').value), dias = new Date(anio, mes + 1, 0).getDate();
-        for (var d = 1; d <= dias; d++) { 
-            labels.push(d); 
-            var fStr = anio + '-' + String(mes + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0'); 
-            var total = 0; 
-            cobros.filter(function(c) { return c.fecha === fStr; }).forEach(function(c) { 
-                total += c.importe; 
-                if(c.metodo==='Efectivo') mValores[0]+=c.importe; else if(c.metodo==='Tarjeta') mValores[1]+=c.importe; else if(c.metodo==='Bizum') mValores[2]+=c.importe; else if(c.metodo==='Transferencia') mValores[3]+=c.importe; 
-            }); 
-            valores.push(total); 
-        }
-    } else {
-        var anio2 = parseInt(document.getElementById('grafico-anio2').value), meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-        for (var m = 0; m < 12; m++) { 
-            labels.push(meses[m]); 
-            var total = 0; 
-            cobros.filter(function(c) { var fc = new Date(c.fecha); return fc.getFullYear() === anio2 && fc.getMonth() === m; }).forEach(function(c) { 
-                total += c.importe; 
-                if(c.metodo==='Efectivo') mValores[0]+=c.importe; else if(c.metodo==='Tarjeta') mValores[1]+=c.importe; else if(c.metodo==='Bizum') mValores[2]+=c.importe; else if(c.metodo==='Transferencia') mValores[3]+=c.importe; 
-            }); 
-            valores.push(total); 
-        }
-    }
-    
-    if (graficoIngresos) graficoIngresos.destroy(); 
-    if (graficoMetodos) graficoMetodos.destroy();
-    
-    graficoIngresos = new Chart(ctx1, { type: periodo === 'dia' ? 'bar' : 'line', data: { labels: labels, datasets: [{ label: 'Ingresos (€)', data: valores, backgroundColor: 'rgba(13, 148, 136, 0.5)', borderColor: '#0d9488', borderWidth: 2, fill: true }] }, options: { responsive: true, maintainAspectRatio: false } });
-    graficoMetodos = new Chart(ctx2, { type: 'doughnut', data: { labels: mLabels, datasets: [{ data: mValores, backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'] }] }, options: { responsive: true, maintainAspectRatio: false } });
-}
-
-function actualizarListadoMasajes() {
-    var fInicio = document.getElementById('filtro-fecha-inicio').value;
-    var fFin = document.getElementById('filtro-fecha-fin').value;
-    var cliente = document.getElementById('filtro-cliente').value;
-    var servicio = document.getElementById('filtro-servicio').value;
-    var busqueda = document.getElementById('busqueda-masajes').value.toLowerCase();
-    
-    var sel = document.getElementById('filtro-cliente');
-    if (sel.options.length <= 1) { clientes.forEach(function(c) { sel.innerHTML += '<option>' + c.nombre + '</option>'; }); }
-    
-    var filtradas = citas.filter(function(c) {
-        if (fInicio && c.fecha < fInicio) return false;
-        if (fFin && c.fecha > fFin) return false;
-        if (cliente && c.cliente !== cliente) return false;
-        if (servicio && c.servicio !== servicio) return false;
-        if (busqueda && !(c.fecha + ' ' + c.hora + ' ' + c.cliente + ' ' + c.servicio).toLowerCase().includes(busqueda)) return false;
-        return true;
-    }).sort(function(a, b) { return new Date(a.fecha + 'T' + a.hora) - new Date(b.fecha + 'T' + b.hora); });
-    
-    var html = '';
-    filtradas.forEach(function(c) {
-        var cobro = cobros.find(function(cb) { return cb.cliente === c.cliente && cb.concepto.includes(c.servicio) && cb.fecha === c.fecha; });
-        var metodo = cobro ? cobro.metodo : '-';
-        var estado = c.cobrado ? '<span style="color:#10b981;">✓</span>' : '<span style="color:#f59e0b;">⏳</span>';
-        html += '<tr><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + '</td><td>' + c.duracion + ' min</td><td>' + c.precio.toFixed(2) + '€</td><td>' + metodo + '</td><td>' + estado + '</td></tr>';
-    });
-    document.getElementById('tb-listado-masajes').innerHTML = html || '<tr><td colspan="8" style="text-align:center;">Sin resultados</td></tr>';
-}
-function filtrarListadoMasajes() { actualizarListadoMasajes(); }
-
-// INICIALIZACIÓN
-window.onload = function() {
-    actualizarReloj();
-    setInterval(actualizarReloj, 1000);
-    iniciarSincronizacion();
-    document.getElementById('d1').valueAsDate = new Date();
-    document.getElementById('cb1').valueAsDate = new Date();
-    
-    // Conectar formularios a sus funciones
-    document.getElementById('f2').onsubmit = guardarCliente;
-    document.getElementById('f1').onsubmit = guardarCita;
-};
-</script>
 </body>
 </html>
