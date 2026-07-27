@@ -68,7 +68,7 @@ function iniciarSincronizacion() {
     });
 }
 
-var diasSemana = ['Domingo', 'Lunes', 'Martes', 'Mi\u00e9rcoles', 'Jueves', 'Viernes', 'S\u00e1bado'];
+var diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 var mesesAnio = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 function actualizarReloj() {
@@ -87,7 +87,7 @@ function cambiar(n) {
     document.getElementById('b' + n).classList.add('active');
 }
 
-// ===== VISUALIZADOR DE HORARIOS Y SOLAPAMIENTO =====
+// ===== VISUALIZADOR DE HORARIOS =====
 function abrirSelectorHoras() {
     var fecha = document.getElementById('d1').value;
     if (!fecha) { alert('Primero selecciona una fecha'); return; }
@@ -282,7 +282,7 @@ function mostrarFichaFidelidad(clienteId) {
     html += '<div class="progress-bar"><div class="fill ' + (tieneDerecho ? 'completo' : '') + '" style="width:' + (tieneDerecho ? 100 : progreso) + '%"></div></div></div>';
     if (tieneDerecho) {
         html += '<div style="margin-top:15px;padding:15px;background:#fef3c7;border-radius:8px;text-align:center;">';
-        html += '<strong style="color:#92400e;font-size:1.1rem;">🎉 ¡TIENE DERECHO A 1 MASAJE GRATIS!</strong><br>';
+        html += '<strong style="color:#92400e;font-size:1.1rem;"> ¡TIENE DERECHO A 1 MASAJE GRATIS!</strong><br>';
         html += '<button class="btn-regalo" onclick="canjearMasajeGratis(\'' + clienteId + '\')" style="margin-top:10px;padding:10px 20px;font-size:16px;">🎁 Canjear Masaje Gratis</button>';
         html += '</div>';
     }
@@ -475,7 +475,7 @@ function actualizar() {
     var html2 = ''; 
     var sorted = citas.slice().sort(function(a, b) { return new Date(a.fecha + 'T' + a.hora) - new Date(b.fecha + 'T' + b.hora); });
     sorted.forEach(function(c) {
-        var estado = c.cobrado ? '<span style="background:#d1fae5;color:#065f46;padding:4px 8px;border-radius:4px;font-size:12px;">✓ Cobrado</span>' : '<span style="background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:4px;font-size:12px;">⏳ Pendiente</span>';
+        var estado = c.cobrado ? '<span style="background:#d1fae5;color:#065f46;padding:4px 8px;border-radius:4px;font-size:12px;">✓ Cobrado</span>' : '<span style="background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:4px;font-size:12px;"> Pendiente</span>';
         var btnCobrar = c.cobrado ? '' : '<button class="btn-cobrar" onclick="cobrarCita(\'' + c.id + '\')">Cobrar</button>';
         var gratisTag = c.esGratis ? ' <span style="background:#f59e0b;color:white;padding:2px 6px;border-radius:4px;font-size:11px;">GRATIS</span>' : '';
         html2 += '<tr class="' + (c.cobrado ? 'cobrado' : 'pendiente-pago') + '"><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + ' (' + c.duracion + ' min)' + gratisTag + '</td><td>' + c.duracion + ' min</td><td>' + (c.precio ? c.precio.toFixed(2) + '€' : '-') + '</td><td>' + estado + '</td><td>' + btnCobrar + '<button class="btn-editar" onclick="editarCita(\'' + c.id + '\')">Editar</button><button class="btn-eliminar" onclick="eliminarCita(\'' + c.id + '\')">Eliminar</button></td></tr>';
@@ -501,7 +501,7 @@ function actualizarTablaClientes() {
         if (tieneDerecho) { badge = '<span class="badge-fidelidad listo">🎁 GRATIS</span>'; } 
         else if (restantes <= 3) { badge = '<span class="badge-fidelidad cerca">' + restantes.toFixed(1) + ' pts</span>'; } 
         else { badge = '<span class="badge-fidelidad normal">' + puntos.toFixed(1) + ' pts</span>'; }
-        html1 += '<tr><td><strong>' + c.nombre + '</strong>' + badge + '</td><td>' + c.telefono + '</td><td>' + (c.email || '-') + '</td><td style="text-align:center;"><strong>' + puntos.toFixed(1) + '</strong></td><td style="text-align:center;"><strong style="color:#f59e0b;">' + gratis + '</strong></td><td><button class="btn-editar" onclick="editarCliente(\'' + c.id + '\')">Editar</button><button class="btn-editar" onclick="mostrarFichaFidelidad(\'' + c.id + '\')" style="background:#f59e0b;">🎁 Fidelidad</button><button class="btn-eliminar" onclick="eliminarCliente(\'' + c.id + '\')">Eliminar</button></td></tr>';
+        html1 += '<tr><td><strong>' + c.nombre + '</strong>' + badge + '</td><td>' + c.telefono + '</td><td>' + (c.email || '-') + '</td><td style="text-align:center;"><strong>' + puntos.toFixed(1) + '</strong></td><td style="text-align:center;"><strong style="color:#f59e0b;">' + gratis + '</strong></td><td><button class="btn-editar" onclick="editarCliente(\'' + c.id + '\')">Editar</button><button class="btn-editar" onclick="mostrarFichaFidelidad(\'' + c.id + '\')" style="background:#f59e0b;"> Fidelidad</button><button class="btn-eliminar" onclick="eliminarCliente(\'' + c.id + '\')">Eliminar</button></td></tr>';
         sel += '<option>' + c.nombre + '</option>';
         selCobro += '<option>' + c.nombre + '</option>';
     });
@@ -736,6 +736,12 @@ window.onload = function() {
         btn.disabled = !(this.value && parseFloat(this.value) > 0);
         btn.textContent = btn.disabled ? 'Introduce el precio' : 'Guardar Cita';
     });
+    // CONECTAR BOTONES DEL MENÚ
+    document.getElementById('b1').onclick = function() { cambiar(1); };
+    document.getElementById('b2').onclick = function() { cambiar(2); };
+    document.getElementById('b3').onclick = function() { cambiar(3); actualizarTablaClientes(); };
+    document.getElementById('b4').onclick = function() { cambiar(4); inicializarGraficos(); actualizarCaja(); actualizarListadoMasajes(); };
+    document.getElementById('b7').onclick = function() { cambiar(5); cargarTarifasEnFormulario(); };
 };
 </script>
 <style>
@@ -900,7 +906,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <button id="b1" class="active">📊 Resumen</button>
 <button id="b2">📅 Agenda</button>
 <button id="b3">👥 Clientes</button>
-<button id="b4"> Caja</button>
+<button id="b4">💰 Caja</button>
 <button id="b7">💵 Tarifas</button>
 </div>
 
@@ -999,7 +1005,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div id="s3" class="section">
 <h2>Clientes</h2>
 <div class="busqueda-container">
-    <label> Buscar:</label>
+    <label>🔍 Buscar:</label>
     <input type="text" id="busqueda-clientes" placeholder="Escribe nombre, apellido o teléfono..." oninput="filtrarClientes()">
     <span class="contador-resultados" id="contador-resultados"></span>
 </div>
@@ -1015,7 +1021,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </form>
 </div>
 <div id="ficha-fidelidad" class="card" style="display:none;">
-    <h3> Programa de Fidelización</h3>
+    <h3>🎁 Programa de Fidelización</h3>
     <div id="contenido-fidelidad"></div>
 </div>
 <div class="card">
@@ -1077,7 +1083,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div class="grafico-container"><canvas id="graficoMetodos"></canvas></div>
 </div>
 <div class="card">
-<h3>📋 Listado de Masajes Realizados</h3>
+<h3> Listado de Masajes Realizados</h3>
 <div class="busqueda-rapida">
     <input type="text" id="busqueda-masajes" placeholder="🔍 Buscar en el listado..." oninput="actualizarListadoMasajes()">
 </div>
@@ -1147,7 +1153,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <td><div class="input-con-euro"><input type="number" id="precio_rtp_120" step="1" min="0" onchange="guardarTarifas()"></div></td></tr>
 </tbody>
 </table>
-<button class="btn" onclick="cargarTarifasPorDefecto()" style="background:#6b7280; margin-top:20px;"> Restaurar precios por defecto</button>
+<button class="btn" onclick="cargarTarifasPorDefecto()" style="background:#6b7280; margin-top:20px;">🔄 Restaurar precios por defecto</button>
 </div>
 </div>
 </div>
