@@ -1115,9 +1115,13 @@ function filtrarListadoMasajes() { actualizarListadoMasajes(); }
 window.onload = function() {
     actualizarReloj();
     setInterval(actualizarReloj, 1000);
-    iniciarSincronizacion(); // <-- AQUÍ EMPIEZA LA MAGIA DE FIREBASE
+    iniciarSincronizacion();
     document.getElementById('d1').valueAsDate = new Date();
     document.getElementById('cb1').valueAsDate = new Date();
+    
+    // Conectar formularios a sus funciones
+    document.getElementById('f2').onsubmit = guardarCliente;
+    document.getElementById('f1').onsubmit = guardarCita;
 };
 </script>
 </body>
