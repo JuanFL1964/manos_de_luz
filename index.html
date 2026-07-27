@@ -1,0 +1,1876 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Manos de Luz - Gesti&oacute;n</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+* { box-sizing: border-box; }
+body { font-family: Arial, sans-serif; background: #f0fdfa; margin: 0; font-size: 16px; }
+img { max-width: 100%; height: auto; }
+
+.header { 
+    background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); 
+    color: white; 
+    padding: 15px 30px; 
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.header-centro { text-align: center; flex: 1; }
+.header-derecha { text-align: right; flex: 1; }
+.header-izquierda { flex: 1; }
+.logo { max-width: 150px; margin-bottom: 5px; }
+.reloj-fecha { font-weight: bold; font-size: 14px; margin-bottom: 3px; }
+.reloj-hora { font-size: 22px; font-family: 'Courier New', monospace; font-weight: bold; letter-spacing: 2px; }
+
+.nav { 
+    background: white; 
+    padding: 10px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+    overflow-x: auto;
+    white-space: nowrap;
+}
+.nav button { background: none; border: none; padding: 15px; cursor: pointer; font-size: 16px; color: #64748b; white-space: nowrap; }
+.nav button.active { color: #0d9488; border-bottom: 3px solid #0d9488; font-weight: bold; }
+
+.main { 
+    max-width: 1200px; 
+    margin: 0 auto; 
+    padding: 30px;
+}
+.section { display: none; }
+.section.active { display: block; animation: fadeIn 0.3s; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+input, select, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+button.btn { background: #0d9488; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; margin-right: 5px; }
+button.btn:hover { background: #0f766e; }
+button.btn-cancelar { background: #6b7280; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; }
+button.btn-editar { background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
+button.btn-eliminar { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+button.btn-cobrar { background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
+button.btn-regalo { background: #f59e0b; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
+button.btn-regalo:hover { background: #d97706; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+th { background: #f0fdfa; color: #0f766e; }
+.editando { background: #fef3c7 !important; border: 2px solid #f59e0b; }
+.alerta { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
+.alerta-regalo { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 10px 0; border-radius: 8px; display: flex; align-items: center; gap: 15px; }
+.alerta-regalo .icono { font-size: 2rem; }
+.alerta-regalo .texto { flex: 1; }
+.alerta-regalo .texto strong { color: #92400e; font-size: 1.1rem; }
+.estado-guardado {
+    position: fixed; bottom: 20px; right: 20px; background: #059669; color: white;
+    padding: 12px 20px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    opacity: 0; transition: opacity 0.3s; z-index: 1000;
+}
+.estado-guardado.visible { opacity: 1; }
+.stats-caja { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+.stat-box { background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #0d9488; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.stat-box h4 { margin: 0 0 10px 0; color: #64748b; font-size: 14px; }
+.stat-box .amount { font-size: 2rem; font-weight: bold; color: #0d9488; }
+.stat-box.efectivo { border-left-color: #10b981; } .stat-box.efectivo .amount { color: #10b981; }
+.stat-box.tarjeta { border-left-color: #3b82f6; } .stat-box.tarjeta .amount { color: #3b82f6; }
+.stat-box.pendiente { border-left-color: #f59e0b; } .stat-box.pendiente .amount { color: #f59e0b; }
+.cobrado { background: #d1fae5; } .pendiente-pago { background: #fef3c7; }
+.filtros-grafico { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+.filtros-grafico select, .filtros-grafico input { width: auto; margin: 0; }
+.grafico-container { position: relative; height: 300px; margin-bottom: 30px; }
+.mes-selector { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; }
+.duracion-container { display: flex; gap: 15px; margin: 15px 0; flex-wrap: wrap; }
+.duracion-option { display: flex; align-items: center; gap: 8px; padding: 10px 20px; background: #f0fdfa; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s; }
+.duracion-option:hover { background: #d1fae5; border-color: #0d9488; }
+.duracion-option input[type="radio"] { width: 20px; height: 20px; cursor: pointer; margin: 0; }
+.duracion-option label { cursor: pointer; font-weight: 500; color: #374151; margin: 0; }
+.duracion-option input[type="radio"]:checked + label { color: #0d9488; font-weight: bold; }
+.duracion-option:has(input[type="radio"]:checked) { background: #d1fae5; border-color: #0d9488; box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3); }
+.input-con-euro { position: relative; }
+.input-con-euro input { padding-left: 35px; }
+.input-con-euro::before { content: '\20AC'; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #0d9488; font-weight: bold; font-size: 16px; }
+.tabla-precios { width: 100%; border-collapse: collapse; margin-top: 15px; }
+.tabla-precios th, .tabla-precios td { padding: 12px; text-align: center; border: 1px solid #ddd; }
+.tabla-precios th { background: #0d9488; color: white; }
+.tabla-precios tr:nth-child(even) { background: #f0fdfa; }
+.tabla-precios input[type="number"] { width: 100px; margin: 0; text-align: center; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+.tabla-precios input[type="number"]:focus { border-color: #0d9488; outline: none; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1); }
+.info-precio { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 12px; margin: 10px 0; border-radius: 4px; }
+.info-precio strong { color: #1e40af; }
+.busqueda-container {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.busqueda-container label { font-weight: bold; color: #0f766e; }
+.busqueda-container input {
+    flex: 1;
+    min-width: 250px;
+    padding: 12px 15px;
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 16px;
+}
+.busqueda-container input:focus {
+    border-color: #0d9488;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+}
+.busqueda-container .contador-resultados {
+    color: #64748b;
+    font-size: 14px;
+}
+.badge-fidelidad {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 5px;
+}
+.badge-fidelidad.normal { background: #e0f2fe; color: #0369a1; }
+.badge-fidelidad.cerca { background: #fef3c7; color: #92400e; }
+.badge-fidelidad.listo { background: #f59e0b; color: white; animation: pulse 2s infinite; }
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+.info-fidelidad {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    padding: 10px;
+    background: #f0fdfa;
+    border-radius: 8px;
+}
+.info-fidelidad .stat {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    padding: 10px;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.info-fidelidad .stat .numero {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #0d9488;
+}
+.info-fidelidad .stat .etiqueta {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 5px;
+}
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 5px;
+}
+.progress-bar .fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0d9488, #14b8a6);
+    transition: width 0.3s;
+}
+.progress-bar .fill.completo {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+}
+.modal-overlay.visible { display: flex; }
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    max-width: 450px;
+    width: 90%;
+}
+.modal-content h3 { margin-top: 0; color: #0f766e; }
+.modal-content .importe-grande {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #10b981;
+    text-align: center;
+    margin: 15px 0;
+}
+.modal-content .cliente-info {
+    text-align: center;
+    color: #64748b;
+    margin-bottom: 20px;
+}
+.metodos-pago {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 20px 0;
+}
+.metodo-pago {
+    padding: 15px;
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+}
+.metodo-pago:hover { border-color: #0d9488; background: #f0fdfa; }
+.metodo-pago.selected {
+    border-color: #0d9488;
+    background: #d1fae5;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
+}
+.metodo-pago .icono { font-size: 1.8rem; display: block; margin-bottom: 5px; }
+.metodo-pago .nombre { font-weight: bold; color: #374151; }
+.modal-botones {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+.modal-botones button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+}
+.modal-botones .btn-confirmar { background: #10b981; color: white; }
+.modal-botones .btn-confirmar:hover { background: #059669; }
+.modal-botones .btn-cancelar { background: #6b7280; color: white; }
+.modal-botones .btn-cancelar:hover { background: #4b5563; }
+input:disabled, select:disabled, textarea:disabled {
+    background: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+.duracion-container.deshabilitado {
+    opacity: 0.5;
+    pointer-events: none;
+}
+.duracion-container.activo {
+    opacity: 1;
+    pointer-events: auto;
+}
+#label-gratis.deshabilitado {
+    opacity: 0.5;
+    pointer-events: none;
+}
+#label-gratis.activo {
+    opacity: 1;
+    pointer-events: auto;
+}
+button.btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+.filtros-listado {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.filtros-listado input, .filtros-listado select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+.filtros-listado label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #0f766e;
+    font-size: 14px;
+}
+.horario-visualizador {
+    margin: 20px 0;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    transition: all 0.3s;
+}
+.horario-visualizador.activo {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
+}
+.horario-visualizador h4 {
+    margin-top: 0;
+    color: #0f766e;
+    margin-bottom: 15px;
+}
+.horario-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+}
+.horario-slot {
+    padding: 8px 4px;
+    text-align: center;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+.horario-slot.libre {
+    background: #d1fae5;
+    color: #065f46;
+    border-color: #10b981;
+}
+.horario-slot.libre:hover {
+    background: #a7f3d0;
+    transform: scale(1.05);
+}
+.horario-slot.ocupado {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #ef4444;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+.horario-slot.seleccionado {
+    background: #059669 !important;
+    color: white !important;
+    border-color: #047857 !important;
+    font-weight: bold;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.3);
+    transform: scale(1.05);
+}
+.horario-slot.seleccionado:hover {
+    background: #047857 !important;
+}
+.horario-leyenda {
+    display: flex;
+    gap: 20px;
+    margin-top: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.horario-leyenda-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+.horario-leyenda-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 2px solid;
+}
+.horario-leyenda-color.libre {
+    background: #d1fae5;
+    border-color: #10b981;
+}
+.horario-leyenda-color.ocupado {
+    background: #fee2e2;
+    border-color: #ef4444;
+}
+.horario-leyenda-color.seleccionado {
+    background: #059669;
+    border-color: #047857;
+}
+.alerta-solapamiento {
+    background: #fee2e2;
+    border-left: 4px solid #ef4444;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 4px;
+    display: none;
+}
+.alerta-solapamiento.visible {
+    display: block;
+    animation: shake 0.5s;
+}
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+#t1 {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+#t1:hover:not(:disabled) {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+}
+.hora-hint {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: -5px;
+    margin-bottom: 10px;
+    font-style: italic;
+}
+.busqueda-rapida {
+    margin-bottom: 15px;
+}
+.busqueda-rapida input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+}
+.busqueda-rapida input:focus {
+    border-color: #0d9488;
+    outline: none;
+}
+
+@media (min-width: 1920px) {
+    .main { max-width: 1600px; }
+}
+
+@media (max-width: 1199px) and (min-width: 768px) {
+    .header { padding: 10px 15px; }
+    .logo { max-width: 100px; }
+    .reloj-hora { font-size: 18px; }
+    .nav button { padding: 10px; font-size: 14px; }
+    .main { padding: 20px; }
+    .stats-caja { grid-template-columns: repeat(2, 1fr); }
+    .horario-grid { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+}
+
+@media (max-width: 767px) {
+    .header { padding: 8px 10px; flex-direction: column; text-align: center; }
+    .header-izquierda, .header-derecha { flex: none; width: 100%; text-align: center; }
+    .logo { max-width: 80px; }
+    .reloj-fecha { font-size: 12px; }
+    .reloj-hora { font-size: 16px; }
+    .nav { padding: 5px; overflow-x: scroll; }
+    .nav button { padding: 8px 12px; font-size: 12px; }
+    .main { padding: 10px; }
+    .card { padding: 15px; }
+    .stats-caja { grid-template-columns: 1fr; }
+    .stat-box .amount { font-size: 1.5rem; }
+    .duracion-container { flex-direction: column; }
+    .duracion-option { width: 100%; }
+    .horario-grid { grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 5px; }
+    .horario-slot { font-size: 10px; padding: 6px 2px; }
+    table { font-size: 12px; }
+    th, td { padding: 8px; }
+    .filtros-listado { grid-template-columns: 1fr; }
+    .filtros-grafico { flex-direction: column; align-items: flex-start; }
+    .filtros-grafico select, .filtros-grafico input { width: 100%; }
+    .modal-content { width: 95%; padding: 20px; }
+    .metodos-pago { grid-template-columns: 1fr; }
+    body { font-size: 14px; }
+    h2 { font-size: 1.5rem; }
+    h3 { font-size: 1.2rem; }
+    .card table { display: block; overflow-x: auto; white-space: nowrap; }
+}
+
+@media (max-width: 479px) {
+    .header { padding: 5px; }
+    .logo { max-width: 60px; }
+    .nav button { padding: 6px 8px; font-size: 11px; }
+    .main { padding: 5px; }
+    .card { padding: 10px; }
+    button.btn { padding: 8px 16px; font-size: 14px; }
+    input, select, textarea { font-size: 14px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-izquierda"></div>
+    <div class="header-centro">
+        <img src="https://i.imgur.com/0PowleW.png" alt="Manos de Luz" class="logo">
+        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Quiromasaje Tarragona - Sistema de Gesti&oacute;n</p>
+    </div>
+    <div class="header-derecha">
+        <div class="reloj-fecha" id="reloj-fecha"></div>
+        <div class="reloj-hora" id="reloj-hora"></div>
+    </div>
+</div>
+
+<div class="nav">
+<button id="b1" class="active">📊 Resumen</button>
+<button id="b2">📅 Agenda</button>
+<button id="b3"> Clientes</button>
+<button id="b4">💰 Caja</button>
+<button id="b7">💵 Tarifas</button>
+<button id="b5" style="float:right;background:#059669;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">💾 Guardar</button>
+<button id="b6" style="float:right;background:#8b5cf6;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">📥 Importar</button>
+</div>
+
+<div class="main">
+<div class="alerta">
+<strong>⚠️ Sistema de seguridad activado:</strong> Los datos se guardan autom&aacute;ticamente en el navegador. Al cerrar la p&aacute;gina se exportar&aacute; una copia de seguridad.
+</div>
+
+<div id="s1" class="section active">
+<h2>Resumen del D&iacute;a</h2>
+<div class="card">
+<p>Total clientes: <span id="n1" style="font-size:2rem;color:#0d9488;font-weight:bold;">0</span></p>
+<p>Citas hoy: <span id="n2" style="font-size:2rem;color:#3b82f6;font-weight:bold;">0</span></p>
+<p>Pr&oacute;xima cita: <span id="n3" style="color:#8b5cf6;font-weight:bold;">Ninguna</span></p>
+<p>Cobros hoy: <span id="n4" style="font-size:2rem;color:#10b981;font-weight:bold;">0&euro;</span></p>
+</div>
+<div class="card">
+<h3>Pr&oacute;ximas citas</h3>
+<div id="dc"></div>
+</div>
+</div>
+
+<div id="s2" class="section">
+<h2>Agenda</h2>
+<div class="card" id="card-cita">
+<h3>Nueva Cita</h3>
+<form id="f1">
+<input type="date" id="d1" required onchange="onFechaHoraChange()">
+<input type="time" id="t1" required onchange="onFechaHoraChange()">
+<p class="hora-hint">💡 Haz clic o doble clic en el campo de hora para ver las horas disponibles</p>
+
+<div id="visualizador-horarios" class="horario-visualizador" style="display:none;">
+    <h4> Horarios disponibles para <span id="fecha-seleccionada"></span></h4>
+    <div class="horario-grid" id="horario-grid"></div>
+    <div class="horario-leyenda">
+        <div class="horario-leyenda-item"><div class="horario-leyenda-color libre"></div><span>Disponible</span></div>
+        <div class="horario-leyenda-item"><div class="horario-leyenda-color seleccionado"></div><span>Seleccionado (hora elegida)</span></div>
+        <div class="horario-leyenda-item"><div class="horario-leyenda-color ocupado"></div><span>Ocupado</span></div>
+    </div>
+</div>
+
+<div id="alerta-solapamiento" class="alerta-solapamiento">
+    <strong>⚠️ Conflicto de horario:</strong> <span id="mensaje-solapamiento"></span>
+</div>
+
+<select id="c1" required onchange="onClienteChange()" disabled><option value="">Primero selecciona fecha y hora...</option></select>
+
+<div id="aviso-fidelidad" style="display:none;"></div>
+
+<label><strong>Tipo de Masaje:</strong></label>
+<select id="sv1" required onchange="onServicioChange()" disabled>
+    <option value="">Primero selecciona un cliente...</option>
+    <option value="Masaje relajante">Masaje relajante</option>
+    <option value="Masaje terap&eacute;utico">Masaje terap&eacute;utico</option>
+    <option value="Masaje descontracturante">Masaje descontracturante</option>
+    <option value="Masaje de Espalda">Masaje de Espalda</option>
+    <option value="Masaje de Piernas">Masaje de Piernas</option>
+    <option value="Masaje deportivo">Masaje deportivo</option>
+    <option value="Reflexolog&iacute;a podal (RTP)">Reflexolog&iacute;a podal (RTP)</option>
+</select>
+
+<label><strong>Duraci&oacute;n:</strong></label>
+<div class="duracion-container deshabilitado" id="duracion-container">
+    <div class="duracion-option">
+        <input type="radio" id="dur60" name="duracion" value="60" onchange="onDuracionChange()" checked disabled>
+        <label for="dur60">60 minutos (1 punto)</label>
+    </div>
+    <div class="duracion-option">
+        <input type="radio" id="dur90" name="duracion" value="90" onchange="onDuracionChange()" disabled>
+        <label for="dur90">90 minutos (1.5 puntos)</label>
+    </div>
+    <div class="duracion-option">
+        <input type="radio" id="dur120" name="duracion" value="120" onchange="onDuracionChange()" disabled>
+        <label for="dur120">2 horas (2 puntos)</label>
+    </div>
+</div>
+
+<div id="info-precio" class="info-precio" style="display:none;">
+    <strong>Precio de tarifa:</strong> <span id="precio-tarifa">0&euro;</span> 
+    <span style="color:#6b7280;font-size:0.9rem;">(Puedes modificarlo manualmente si haces descuento)</span>
+</div>
+
+<label><strong>Precio Final:</strong></label>
+<div class="input-con-euro">
+    <input type="number" id="p1" placeholder="0.00" step="0.01" min="0" required disabled>
+</div>
+
+<label id="label-gratis" class="deshabilitado" style="display:flex;align-items:center;gap:10px;margin:10px 0;">
+    <input type="checkbox" id="esGratis" style="width:auto;margin:0;" disabled>
+    <strong>Es masaje GRATIS (fidelizaci&oacute;n)</strong>
+</label>
+
+<textarea id="nt1" placeholder="Notas adicionales..." disabled></textarea>
+<button type="submit" class="btn" id="btn-cita" disabled>Completa todos los campos para guardar</button>
+<button type="button" class="btn-cancelar" id="btn-cancelar-cita" style="display:none;">Cancelar edici&oacute;n</button>
+</form>
+</div>
+<div class="card">
+<table>
+<thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Duraci&oacute;n</th><th>Precio</th><th>Estado</th><th>Acciones</th></tr></thead>
+<tbody id="tb1"></tbody>
+</table>
+</div>
+</div>
+
+<div id="s3" class="section">
+<h2>Clientes</h2>
+<div class="busqueda-container">
+    <label>🔍 Buscar:</label>
+    <input type="text" id="busqueda-clientes" placeholder="Escribe nombre, apellido o tel&eacute;fono..." oninput="filtrarClientes()">
+    <span class="contador-resultados" id="contador-resultados"></span>
+</div>
+<div class="card" id="card-cliente">
+<h3>Nuevo Cliente</h3>
+<form id="f2">
+<input type="text" id="nm1" placeholder="Nombre" required>
+<input type="tel" id="ph1" placeholder="Tel&eacute;fono" required>
+<input type="email" id="em1" placeholder="Email">
+<textarea id="nt2" placeholder="Notas..."></textarea>
+<button type="submit" class="btn" id="btn-cliente">Guardar Cliente</button>
+<button type="button" class="btn-cancelar" id="btn-cancelar-cliente" style="display:none;">Cancelar edici&oacute;n</button>
+</form>
+</div>
+<div id="ficha-fidelidad" class="card" style="display:none;">
+    <h3>🎁 Programa de Fidelizaci&oacute;n</h3>
+    <div id="contenido-fidelidad"></div>
+</div>
+<div class="card">
+<table>
+<thead><tr><th>Nombre</th><th>Tel&eacute;fono</th><th>Email</th><th>Puntos</th><th>Gratis</th><th>Acciones</th></tr></thead>
+<tbody id="tb2"></tbody>
+</table>
+</div>
+</div>
+
+<div id="s4" class="section">
+<h2>Control de Caja y Estad&iacute;sticas</h2>
+<div class="stats-caja">
+<div class="stat-box"><h4>Total Hoy</h4><div class="amount" id="caja-hoy">0&euro;</div></div>
+<div class="stat-box efectivo"><h4>Efectivo</h4><div class="amount" id="caja-efectivo">0&euro;</div></div>
+<div class="stat-box tarjeta"><h4>Tarjeta</h4><div class="amount" id="caja-tarjeta">0&euro;</div></div>
+<div class="stat-box pendiente"><h4>Pendiente de Cobro</h4><div class="amount" id="caja-pendiente">0&euro;</div></div>
+</div>
+<div class="card">
+<h3>Registrar Cobro</h3>
+<form id="f3">
+<input type="date" id="cb1" required>
+<div class="input-con-euro"><input type="number" id="cb2" placeholder="0.00" step="0.01" min="0" required></div>
+<select id="cb3" required>
+<option value="">M&eacute;todo de pago...</option>
+<option value="Efectivo">Efectivo</option>
+<option value="Tarjeta">Tarjeta</option>
+<option value="Bizum">Bizum</option>
+<option value="Transferencia">Transferencia</option>
+</select>
+<select id="cb4"><option value="">Cliente (opcional)...</option></select>
+<input type="text" id="cb5" placeholder="Concepto (ej: Masaje relajante)">
+<textarea id="cb6" placeholder="Notas..."></textarea>
+<button type="submit" class="btn">Registrar Cobro</button>
+</form>
+</div>
+<div class="card">
+<h3>📈 Gr&aacute;ficos de Ingresos</h3>
+<div class="filtros-grafico">
+<label><strong>Per&iacute;odo:</strong></label>
+<select id="grafico-periodo" onchange="cambiarGrafico()">
+<option value="dia">Por D&iacute;a</option>
+<option value="mes" selected>Por Mes</option>
+<option value="a&ntilde;o">Por A&ntilde;o</option>
+</select>
+<div id="filtro-dia" style="display:none;"><input type="date" id="grafico-fecha" onchange="actualizarGraficos()"></div>
+<div id="filtro-mes" class="mes-selector">
+<select id="grafico-mes" onchange="actualizarGraficos()">
+<option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option>
+<option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option>
+<option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option>
+<option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
+</select>
+<select id="grafico-anio" onchange="actualizarGraficos()"></select>
+</div>
+<div id="filtro-anio" style="display:none;"><select id="grafico-anio2" onchange="actualizarGraficos()"></select></div>
+</div>
+<div class="grafico-container"><canvas id="graficoIngresos"></canvas></div>
+<div class="grafico-container"><canvas id="graficoMetodos"></canvas></div>
+</div>
+
+<div class="card">
+<h3>📋 Listado de Masajes Realizados</h3>
+<div class="busqueda-rapida">
+    <input type="text" id="busqueda-masajes" placeholder="🔍 Buscar en el listado... (escribe nombre, fecha, servicio, etc.)" oninput="filtrarListadoMasajes()">
+</div>
+<div class="filtros-listado">
+    <div><label>Fecha inicio:</label><input type="date" id="filtro-fecha-inicio" onchange="actualizarListadoMasajes()"></div>
+    <div><label>Fecha fin:</label><input type="date" id="filtro-fecha-fin" onchange="actualizarListadoMasajes()"></div>
+    <div><label>Cliente:</label><select id="filtro-cliente" onchange="actualizarListadoMasajes()"><option value="">Todos los clientes</option></select></div>
+    <div><label>Servicio:</label><select id="filtro-servicio" onchange="actualizarListadoMasajes()">
+        <option value="">Todos los servicios</option>
+        <option value="Masaje relajante">Masaje relajante</option>
+        <option value="Masaje terap&eacute;utico">Masaje terap&eacute;utico</option>
+        <option value="Masaje descontracturante">Masaje descontracturante</option>
+        <option value="Masaje de Espalda">Masaje de Espalda</option>
+        <option value="Masaje de Piernas">Masaje de Piernas</option>
+        <option value="Masaje deportivo">Masaje deportivo</option>
+        <option value="Reflexolog&iacute;a podal (RTP)">Reflexolog&iacute;a podal (RTP)</option>
+    </select></div>
+</div>
+<table>
+    <thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Duraci&oacute;n</th><th>Precio</th><th>M&eacute;todo Pago</th><th>Estado</th></tr></thead>
+    <tbody id="tb-listado-masajes"></tbody>
+</table>
+</div>
+
+<div class="card">
+<h3>Movimientos de Caja</h3>
+<table>
+<thead><tr><th>Fecha</th><th>Importe</th><th>M&eacute;todo</th><th>Cliente</th><th>Concepto</th><th>Acciones</th></tr></thead>
+<tbody id="tb3"></tbody>
+</table>
+</div>
+</div>
+
+<div id="s5" class="section">
+<h2>Configuraci&oacute;n de Tarifas</h2>
+<div class="card">
+<h3>💵 Precios por Tipo de Masaje y Duraci&oacute;n</h3>
+<p style="color:#64748b;margin-bottom:15px;">Configura los precios est&aacute;ndar. Se aplicar&aacute;n autom&aacute;ticamente al crear una cita.</p>
+<table class="tabla-precios">
+<thead><tr><th>Tipo de Masaje</th><th>60 minutos</th><th>90 minutos</th><th>2 horas (120 min)</th></tr></thead>
+<tbody>
+<tr><td><strong>Masaje relajante</strong></td>
+<td><div class="input-con-euro"><input type="number" id="precio_relajante_60" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td>
+<td><div class="input-con-euro"><input type="number" id="precio_relajante_90" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td>
+<td><div class="input-con-euro"><input type="number" id="precio_relajante_120" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td></tr>
+<tr><td><strong>Masaje terap&eacute;utico</strong></td>
+<td><div class="input-con-euro"><input type="number" id="precio_terapeutico_60" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td>
+<td><div class="input-con-euro"><input type="number" id="precio_terapeutico_90" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td>
+<td><div class="input-con-euro"><input type="number" id="precio_terapeutico_120" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td></tr>
+<tr><td><strong>Masaje descontracturante</strong></td>
+<td><div class="input-con-euro"><input type="number" id="precio_descontracturante_60" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td>
+<td><div class="input-con-euro"><input type="number" id="precio_descontracturante_90" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td>
+<td><div class="input-con-euro"><input type="number" id="precio_descontracturante_120" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td></tr>
+<tr><td><strong>Masaje de Espalda</strong></td>
+<td><div class="input-con-euro"><input type="number" id="precio_espalda_60" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td>
+<td><div class="input-con-euro"><input type="number" id="precio_espalda_90" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td>
+<td><div class="input-con-euro"><input type="number" id="precio_espalda_120" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td></tr>
+<tr><td><strong>Masaje de Piernas</strong></td>
+<td><div class="input-con-euro"><input type="number" id="precio_piernas_60" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td>
+<td><div class="input-con-euro"><input type="number" id="precio_piernas_90" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td>
+<td><div class="input-con-euro"><input type="number" id="precio_piernas_120" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td></tr>
+<tr><td><strong>Masaje deportivo</strong></td>
+<td><div class="input-con-euro"><input type="number" id="precio_deportivo_60" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td>
+<td><div class="input-con-euro"><input type="number" id="precio_deportivo_90" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td>
+<td><div class="input-con-euro"><input type="number" id="precio_deportivo_120" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td></tr>
+<tr><td><strong>Reflexolog&iacute;a podal (RTP)</strong></td>
+<td><div class="input-con-euro"><input type="number" id="precio_rtp_60" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td>
+<td><div class="input-con-euro"><input type="number" id="precio_rtp_90" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td>
+<td><div class="input-con-euro"><input type="number" id="precio_rtp_120" step="1" min="0" onchange="guardarTarifasAutomatico()"></div></td></tr>
+</tbody>
+</table>
+<button class="btn" onclick="guardarTarifas()" style="margin-top:20px;">💾 Guardar Tarifas Manualmente</button>
+<button class="btn" onclick="cargarTarifasPorDefecto()" style="background:#6b7280;">🔄 Restaurar precios por defecto</button>
+</div>
+</div>
+
+</div>
+
+<input type="file" id="input-importar" accept=".json" style="display:none;">
+<div id="estado" class="estado-guardado">💾 Guardado</div>
+
+<div id="modal-cobro" class="modal-overlay">
+    <div class="modal-content">
+        <h3>💰 Registrar Cobro</h3>
+        <div class="cliente-info" id="modal-cliente-info"></div>
+        <div class="importe-grande" id="modal-importe">0&euro;</div>
+        <p style="text-align:center;color:#64748b;margin-bottom:10px;"><strong>Selecciona m&eacute;todo de pago:</strong></p>
+        <div class="metodos-pago">
+            <div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)"><span class="icono">💵</span><span class="nombre">Efectivo</span></div>
+            <div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)"><span class="icono">💳</span><span class="nombre">Tarjeta</span></div>
+            <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)"><span class="icono"></span><span class="nombre">Bizum</span></div>
+            <div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"><span class="icono">🏦</span><span class="nombre">Transferencia</span></div>
+        </div>
+        <div class="modal-botones">
+            <button class="btn-cancelar" onclick="cerrarModalCobro()">Cancelar</button>
+            <button class="btn-confirmar" onclick="confirmarCobro()">Confirmar Cobro</button>
+        </div>
+    </div>
+</div>
+
+<script>
+var clientes = JSON.parse(localStorage.getItem('c')) || [];
+var citas = JSON.parse(localStorage.getItem('a')) || [];
+var cobros = JSON.parse(localStorage.getItem('cobros')) || [];
+var tarifas = JSON.parse(localStorage.getItem('tarifas')) || {};
+var editandoCliente = null;
+var editandoCita = null;
+var datosCambiados = false;
+var graficoIngresos = null;
+var graficoMetodos = null;
+var clientesFiltrados = [];
+var cobroPendiente = null;
+var metodoSeleccionado = null;
+
+var tarifasPorDefecto = {
+    'relajante_60': 50, 'relajante_90': 75, 'relajante_120': 100,
+    'terapeutico_60': 50, 'terapeutico_90': 75, 'terapeutico_120': 100,
+    'descontracturante_60': 50, 'descontracturante_90': 75, 'descontracturante_120': 100,
+    'espalda_60': 50, 'espalda_90': 75, 'espalda_120': 100,
+    'piernas_60': 50, 'piernas_90': 75, 'piernas_120': 100,
+    'deportivo_60': 50, 'deportivo_90': 75, 'deportivo_120': 100,
+    'rtp_60': 50, 'rtp_90': 75, 'rtp_120': 100
+};
+
+if (Object.keys(tarifas).length === 0) {
+    tarifas = {...tarifasPorDefecto};
+    localStorage.setItem('tarifas', JSON.stringify(tarifas));
+}
+
+clientes.forEach(function(c) {
+    if (c.puntosFidelidad === undefined) c.puntosFidelidad = 0;
+    if (c.masajesGratis === undefined) c.masajesGratis = 0;
+});
+
+var diasSemana = ['Domingo', 'Lunes', 'Martes', 'Mi\u00e9rcoles', 'Jueves', 'Viernes', 'S\u00e1bado'];
+var mesesAnio = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+function actualizarReloj() {
+    var ahora = new Date();
+    var fechaStr = diasSemana[ahora.getDay()] + ', ' + ahora.getDate() + ' de ' + mesesAnio[ahora.getMonth()] + ' de ' + ahora.getFullYear();
+    var horaStr = String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0') + ':' + String(ahora.getSeconds()).padStart(2, '0');
+    document.getElementById('reloj-fecha').textContent = fechaStr;
+    document.getElementById('reloj-hora').textContent = horaStr;
+}
+actualizarReloj();
+setInterval(actualizarReloj, 1000);
+
+document.getElementById('b1').onclick = function() { cambiar(1); };
+document.getElementById('b2').onclick = function() { cambiar(2); };
+document.getElementById('b3').onclick = function() { cambiar(3); actualizarTablaClientes(); };
+document.getElementById('b4').onclick = function() { cambiar(4); inicializarGraficos(); actualizarCaja(); actualizarListadoMasajes(); };
+document.getElementById('b5').onclick = exportar;
+document.getElementById('b6').onclick = function() { document.getElementById('input-importar').click(); };
+document.getElementById('b7').onclick = function() { cambiar(5); cargarTarifasEnFormulario(); };
+
+// ===== IMPORTACIÓN ROBUSTA CON DETECCIÓN Y REPARACIÓN AUTOMÁTICA =====
+document.getElementById('input-importar').onchange = function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    
+    // Leer como ArrayBuffer para ver los bytes reales
+    var reader = new FileReader();
+    reader.onload = function(event) {
+        var arrayBuffer = event.target.result;
+        var bytes = new Uint8Array(arrayBuffer);
+        
+        // Mostrar los primeros bytes para diagnóstico
+        var primerosBytes = '';
+        for (var i = 0; i < Math.min(20, bytes.length); i++) {
+            primerosBytes += bytes[i].toString(16).padStart(2, '0') + ' ';
+        }
+        
+        try {
+            // Detectar y eliminar BOM de cualquier tipo
+            var contenido = '';
+            var offset = 0;
+            
+            // BOM UTF-8: EF BB BF
+            if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+                offset = 3;
+                console.log('BOM UTF-8 detectado y eliminado');
+            }
+            // BOM UTF-16 LE: FF FE
+            else if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
+                offset = 2;
+                console.log('BOM UTF-16 LE detectado');
+                // Convertir de UTF-16 LE
+                var decoder = new TextDecoder('utf-16le');
+                contenido = decoder.decode(bytes.subarray(offset));
+            }
+            // BOM UTF-16 BE: FE FF
+            else if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
+                offset = 2;
+                console.log('BOM UTF-16 BE detectado');
+                var decoder = new TextDecoder('utf-16be');
+                contenido = decoder.decode(bytes.subarray(offset));
+            }
+            
+            // Si no es UTF-16, usar UTF-8 normal
+            if (!contenido) {
+                var decoder = new TextDecoder('utf-8');
+                contenido = decoder.decode(bytes.subarray(offset));
+            }
+            
+            // Eliminar cualquier carácter de control al inicio
+            contenido = contenido.replace(/^[\x00-\x1F\x7F-\x9F\uFEFF]+/, '');
+            contenido = contenido.trim();
+            
+            // Intentar parsear JSON
+            var datos = JSON.parse(contenido);
+            
+            if (datos.clientes && datos.citas) {
+                if (confirm('\u00bfReemplazar los datos actuales? (' + datos.clientes.length + ' clientes, ' + datos.citas.length + ' citas, ' + (datos.cobros ? datos.cobros.length : 0) + ' cobros)')) {
+                    clientes = datos.clientes; 
+                    citas = datos.citas; 
+                    cobros = datos.cobros || [];
+                    if (datos.tarifas) tarifas = datos.tarifas;
+                    clientes.forEach(function(c) {
+                        if (c.puntosFidelidad === undefined) c.puntosFidelidad = 0;
+                        if (c.masajesGratis === undefined) c.masajesGratis = 0;
+                    });
+                    localStorage.setItem('c', JSON.stringify(clientes));
+                    localStorage.setItem('a', JSON.stringify(citas));
+                    localStorage.setItem('cobros', JSON.stringify(cobros));
+                    localStorage.setItem('tarifas', JSON.stringify(tarifas));
+                    actualizar(); 
+                    actualizarCaja(); 
+                    actualizarTablaClientes();
+                    mostrarEstado('\u2705 Datos importados correctamente', 3000);
+                }
+            } else { 
+                alert('\u274c El archivo no tiene el formato correcto.\n\nDebe contener "clientes" y "citas".\n\nPrimeros bytes del archivo: ' + primerosBytes); 
+            }
+        } catch(err) { 
+            // Intentar reparaciones comunes
+            try {
+                // Eliminar caracteres no imprimibles
+                var contenidoReparado = contenido.replace(/[^\x20-\x7E\u00C0-\u024F\u20AC]/g, '');
+                contenidoReparado = contenidoReparado.trim();
+                var datosReparados = JSON.parse(contenidoReparado);
+                if (datosReparados.clientes && datosReparados.citas) {
+                    if (confirm('\u2705 Archivo reparado exitosamente.\n\n\u00bfReemplazar los datos actuales?')) {
+                        clientes = datosReparados.clientes; 
+                        citas = datosReparados.citas; 
+                        cobros = datosReparados.cobros || [];
+                        if (datosReparados.tarifas) tarifas = datosReparados.tarifas;
+                        clientes.forEach(function(c) {
+                            if (c.puntosFidelidad === undefined) c.puntosFidelidad = 0;
+                            if (c.masajesGratis === undefined) c.masajesGratis = 0;
+                        });
+                        localStorage.setItem('c', JSON.stringify(clientes));
+                        localStorage.setItem('a', JSON.stringify(citas));
+                        localStorage.setItem('cobros', JSON.stringify(cobros));
+                        localStorage.setItem('tarifas', JSON.stringify(tarifas));
+                        actualizar(); 
+                        actualizarCaja(); 
+                        actualizarTablaClientes();
+                        mostrarEstado('\u2705 Datos importados (archivo reparado)', 3000);
+                        return;
+                    }
+                }
+            } catch(err2) {
+                // Si también falla la reparación, mostrar error detallado
+            }
+            
+            alert('\u274c Error al leer el archivo:\n\n' + err.message + 
+                  '\n\nPrimeros bytes (hex): ' + primerosBytes +
+                  '\n\nPosibles soluciones:\n' +
+                  '1. Abre el archivo en Notepad++\n' +
+                  '2. Ve a Codificaci\u00f3n \u2192 UTF-8 (sin BOM)\n' +
+                  '3. Guarda el archivo\n' +
+                  '4. Intenta importarlo de nuevo'); 
+        }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
+};
+
+document.getElementById('btn-cancelar-cliente').onclick = cancelarEdicionCliente;
+document.getElementById('btn-cancelar-cita').onclick = cancelarEdicionCita;
+
+function cambiar(n) {
+    for(var i=1; i<=5; i++) {
+        document.getElementById('s'+i).classList.remove('active');
+        var btn = document.getElementById('b'+i);
+        if(btn) btn.classList.remove('active');
+    }
+    document.getElementById('s' + n).classList.add('active');
+    document.getElementById('b' + n).classList.add('active');
+}
+
+var horaClickTimer = null;
+var horaClickCount = 0;
+
+document.getElementById('t1').addEventListener('click', function(e) {
+    if (!this.disabled && document.getElementById('d1').value) {
+        horaClickCount++;
+        if (horaClickCount === 1) {
+            horaClickTimer = setTimeout(function() {
+                abrirSelectorHoras();
+                horaClickCount = 0;
+            }, 250);
+        } else if (horaClickCount === 2) {
+            clearTimeout(horaClickTimer);
+            abrirSelectorHoras();
+            horaClickCount = 0;
+        }
+    }
+});
+
+function abrirSelectorHoras() {
+    var fecha = document.getElementById('d1').value;
+    if (!fecha) { alert('Primero selecciona una fecha'); return; }
+    var visualizador = document.getElementById('visualizador-horarios');
+    visualizador.style.display = 'block';
+    visualizador.classList.add('activo');
+    mostrarVisualizadorHorarios(fecha);
+    visualizador.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function onFechaHoraChange() {
+    var fecha = document.getElementById('d1').value;
+    var hora = document.getElementById('t1').value;
+    var selectCliente = document.getElementById('c1');
+    if (fecha) { mostrarVisualizadorHorarios(fecha); } 
+    else {
+        document.getElementById('visualizador-horarios').style.display = 'none';
+        document.getElementById('visualizador-horarios').classList.remove('activo');
+    }
+    if (fecha && hora) {
+        if (verificarSolapamiento(fecha, hora, null)) {
+            mostrarAlertaSolapamiento(fecha, hora);
+            selectCliente.disabled = true;
+            return;
+        }
+        ocultarAlertaSolapamiento();
+        selectCliente.disabled = false;
+        if (selectCliente.options.length <= 1) { actualizarOpcionesClientes(); }
+        selectCliente.options[0].text = 'Seleccionar cliente...';
+    } else {
+        selectCliente.disabled = true;
+        selectCliente.value = '';
+        document.getElementById('sv1').disabled = true;
+        document.getElementById('sv1').value = '';
+        resetearDesdeDuracion();
+        document.getElementById('aviso-fidelidad').style.display = 'none';
+    }
+}
+
+function onClienteChange() {
+    var clienteNombre = document.getElementById('c1').value;
+    var selectServicio = document.getElementById('sv1');
+    mostrarInfoFidelidad(clienteNombre);
+    if (clienteNombre) {
+        selectServicio.disabled = false;
+        selectServicio.options[0].text = 'Seleccionar tipo de masaje...';
+    } else {
+        selectServicio.disabled = true;
+        selectServicio.value = '';
+        resetearDesdeDuracion();
+    }
+}
+
+function onServicioChange() {
+    var servicio = document.getElementById('sv1').value;
+    var contenedorDuracion = document.getElementById('duracion-container');
+    if (servicio) {
+        contenedorDuracion.classList.remove('deshabilitado');
+        contenedorDuracion.classList.add('activo');
+        document.querySelectorAll('input[name="duracion"]').forEach(function(r) { r.disabled = false; });
+        if (!document.querySelector('input[name="duracion"]:checked')) { document.getElementById('dur60').checked = true; }
+        calcularYMostrarPrecio();
+        activarCamposFinales();
+    } else { resetearDesdeDuracion(); }
+}
+
+function onDuracionChange() { calcularYMostrarPrecio(); activarCamposFinales(); }
+
+function calcularYMostrarPrecio() {
+    var servicio = document.getElementById('sv1').value;
+    var duracionRadio = document.querySelector('input[name="duracion"]:checked');
+    var duracion = duracionRadio ? duracionRadio.value : '60';
+    if (!servicio) return;
+    var mapaServicios = {
+        'Masaje relajante': 'relajante', 'Masaje terap\u00e9utico': 'terapeutico',
+        'Masaje descontracturante': 'descontracturante', 'Masaje de Espalda': 'espalda',
+        'Masaje de Piernas': 'piernas', 'Masaje deportivo': 'deportivo',
+        'Reflexolog\u00eda podal (RTP)': 'rtp'
+    };
+    var clave = mapaServicios[servicio] + '_' + duracion;
+    var precioTarifa = tarifas[clave] || 0;
+    document.getElementById('precio-tarifa').textContent = precioTarifa.toFixed(2) + '\u20ac';
+    document.getElementById('info-precio').style.display = 'block';
+    document.getElementById('p1').value = precioTarifa.toFixed(2);
+}
+
+function activarCamposFinales() {
+    var inputPrecio = document.getElementById('p1');
+    var labelGratis = document.getElementById('label-gratis');
+    var checkboxGratis = document.getElementById('esGratis');
+    var textareaNotas = document.getElementById('nt1');
+    var btnGuardar = document.getElementById('btn-cita');
+    inputPrecio.disabled = false;
+    labelGratis.classList.remove('deshabilitado');
+    labelGratis.classList.add('activo');
+    checkboxGratis.disabled = false;
+    textareaNotas.disabled = false;
+    if (inputPrecio.value && parseFloat(inputPrecio.value) > 0) {
+        btnGuardar.disabled = false;
+        btnGuardar.textContent = 'Guardar Cita';
+    } else {
+        btnGuardar.disabled = true;
+        btnGuardar.textContent = 'Introduce el precio para guardar';
+    }
+}
+
+function resetearDesdeDuracion() {
+    var contenedorDuracion = document.getElementById('duracion-container');
+    var inputPrecio = document.getElementById('p1');
+    var labelGratis = document.getElementById('label-gratis');
+    var checkboxGratis = document.getElementById('esGratis');
+    var textareaNotas = document.getElementById('nt1');
+    var btnGuardar = document.getElementById('btn-cita');
+    contenedorDuracion.classList.add('deshabilitado');
+    contenedorDuracion.classList.remove('activo');
+    document.querySelectorAll('input[name="duracion"]').forEach(function(r) { r.disabled = true; });
+    inputPrecio.disabled = true;
+    inputPrecio.value = '';
+    labelGratis.classList.add('deshabilitado');
+    labelGratis.classList.remove('activo');
+    checkboxGratis.disabled = true;
+    checkboxGratis.checked = false;
+    textareaNotas.disabled = true;
+    btnGuardar.disabled = true;
+    btnGuardar.textContent = 'Completa todos los campos para guardar';
+    document.getElementById('info-precio').style.display = 'none';
+}
+
+function actualizarOpcionesClientes() {
+    var select = document.getElementById('c1');
+    select.innerHTML = '<option value="">Seleccionar cliente...</option>';
+    clientes.forEach(function(c) { select.innerHTML += '<option>' + c.nombre + '</option>'; });
+}
+
+function mostrarInfoFidelidad(clienteNombre) {
+    var avisoDiv = document.getElementById('aviso-fidelidad');
+    if (!clienteNombre) { avisoDiv.style.display = 'none'; return; }
+    var cliente = clientes.find(function(c) { return c.nombre === clienteNombre; });
+    if (!cliente) { avisoDiv.style.display = 'none'; return; }
+    if (cliente.puntosFidelidad === undefined) cliente.puntosFidelidad = 0;
+    if (cliente.masajesGratis === undefined) cliente.masajesGratis = 0;
+    var puntosRestantes = 10 - (cliente.puntosFidelidad % 10);
+    var tieneDerecho = puntosRestantes === 10 && cliente.puntosFidelidad > 0;
+    var html = '<div class="alerta-regalo"><div class="icono">\ud83c\udf81</div><div class="texto">';
+    html += '<strong>' + cliente.nombre + '</strong><br>';
+    html += 'Puntos de fidelidad: <strong>' + cliente.puntosFidelidad.toFixed(1) + '</strong> | ';
+    html += 'Masajes gratis recibidos: <strong>' + cliente.masajesGratis + '</strong><br>';
+    if (tieneDerecho) {
+        html += '<span style="color:#f59e0b;font-weight:bold;">\u00a1TIENE DERECHO A 1 MASAJE GRATIS! </span>';
+    } else {
+        html += 'Le faltan <strong>' + puntosRestantes.toFixed(1) + ' puntos</strong> para el siguiente gratis';
+        html += '<div class="progress-bar"><div class="fill" style="width:' + ((cliente.puntosFidelidad % 10) * 10) + '%"></div></div>';
+    }
+    html += '</div></div>';
+    avisoDiv.innerHTML = html;
+    avisoDiv.style.display = 'block';
+}
+
+function mostrarVisualizadorHorarios(fecha) {
+    document.getElementById('visualizador-horarios').style.display = 'block';
+    document.getElementById('fecha-seleccionada').textContent = fecha;
+    var grid = document.getElementById('horario-grid');
+    grid.innerHTML = '';
+    var horaActual = document.getElementById('t1').value;
+    for (var hora = 9; hora <= 21; hora++) {
+        for (var minuto = 0; minuto < 60; minuto += 15) {
+            var timeStr = String(hora).padStart(2, '0') + ':' + String(minuto).padStart(2, '0');
+            var slot = document.createElement('div');
+            slot.className = 'horario-slot';
+            slot.textContent = timeStr;
+            slot.dataset.hora = timeStr;
+            var ocupado = verificarSolapamiento(fecha, timeStr, null);
+            if (ocupado) {
+                slot.classList.add('ocupado');
+                slot.title = 'No disponible';
+            } else {
+                slot.classList.add('libre');
+                slot.title = 'Disponible - Haz clic para seleccionar';
+                slot.onclick = function() { seleccionarHoraDesdeVisualizador(this.dataset.hora); };
+            }
+            if (timeStr === horaActual) { slot.classList.add('seleccionado'); }
+            grid.appendChild(slot);
+        }
+    }
+}
+
+function seleccionarHoraDesdeVisualizador(hora) {
+    document.getElementById('t1').value = hora;
+    document.querySelectorAll('.horario-slot').forEach(function(slot) {
+        slot.classList.remove('seleccionado');
+        if (slot.dataset.hora === hora) { slot.classList.add('seleccionado'); }
+    });
+    onFechaHoraChange();
+}
+
+function verificarSolapamiento(fecha, horaInicio, duracionMin, citaIdExcluir) {
+    if (!fecha || !horaInicio) return false;
+    var partesHora = horaInicio.split(':');
+    var minutosInicio = parseInt(partesHora[0]) * 60 + parseInt(partesHora[1]);
+    var minutosFin = minutosInicio + (duracionMin || 0);
+    var citasMismoDia = citas.filter(function(c) { return c.fecha === fecha && c.id !== citaIdExcluir; });
+    for (var i = 0; i < citasMismoDia.length; i++) {
+        var cita = citasMismoDia[i];
+        var partesCita = cita.hora.split(':');
+        var citaInicio = parseInt(partesCita[0]) * 60 + parseInt(partesCita[1]);
+        var citaFin = citaInicio + parseInt(cita.duracion);
+        if (minutosInicio < citaFin && (minutosFin === 0 || minutosFin > citaInicio)) { return true; }
+    }
+    return false;
+}
+
+function mostrarAlertaSolapamiento(fecha, hora) {
+    var alerta = document.getElementById('alerta-solapamiento');
+    var mensaje = document.getElementById('mensaje-solapamiento');
+    mensaje.textContent = 'Ya existe una cita programada a las ' + hora + ' o en un horario cercano que entrar\u00eda en conflicto. Por favor, selecciona otra hora.';
+    alerta.classList.add('visible');
+}
+
+function ocultarAlertaSolapamiento() {
+    document.getElementById('alerta-solapamiento').classList.remove('visible');
+}
+
+function getPuntosPorDuracion(duracion) {
+    if (duracion == 60) return 1;
+    if (duracion == 90) return 1.5;
+    if (duracion == 120) return 2;
+    return 1;
+}
+
+function canjearMasajeGratis(clienteId) {
+    var cliente = clientes.find(function(c) { return c.id === clienteId; });
+    if (!cliente) return;
+    if (cliente.puntosFidelidad < 10) {
+        alert('\u274c Este cliente a\u00fan no tiene derecho a masaje gratis. Le faltan ' + (10 - cliente.puntosFidelidad).toFixed(1) + ' puntos.');
+        return;
+    }
+    if (confirm('\u00bfCanjear 1 masaje gratis para ' + cliente.nombre + '?\n\nSe resetear\u00e1 su contador de puntos a 0 y se sumar\u00e1 1 a sus masajes gratis recibidos.')) {
+        cliente.masajesGratis = (cliente.masajesGratis || 0) + 1;
+        cliente.puntosFidelidad = 0;
+        localStorage.setItem('c', JSON.stringify(clientes));
+        actualizarTablaClientes();
+        mostrarFichaFidelidad(clienteId);
+        mostrarEstado('\ud83c\udf81 Masaje gratis canjeado para ' + cliente.nombre, 3000);
+    }
+}
+
+function mostrarFichaFidelidad(clienteId) {
+    var cliente = clientes.find(function(c) { return c.id === clienteId; });
+    if (!cliente) return;
+    if (cliente.puntosFidelidad === undefined) cliente.puntosFidelidad = 0;
+    if (cliente.masajesGratis === undefined) cliente.masajesGratis = 0;
+    var puntosRestantes = 10 - (cliente.puntosFidelidad % 10);
+    var tieneDerecho = puntosRestantes === 10 && cliente.puntosFidelidad > 0;
+    var progreso = (cliente.puntosFidelidad % 10) * 10;
+    var html = '<h4 style="margin-top:0;">' + cliente.nombre + '</h4>';
+    html += '<div class="info-fidelidad">';
+    html += '<div class="stat"><div class="numero">' + cliente.puntosFidelidad.toFixed(1) + '</div><div class="etiqueta">Puntos Acumulados</div></div>';
+    html += '<div class="stat"><div class="numero">' + cliente.masajesGratis + '</div><div class="etiqueta">Masajes Gratis</div></div>';
+    html += '<div class="stat"><div class="numero">' + (tieneDerecho ? 0 : puntosRestantes.toFixed(1)) + '</div><div class="etiqueta">Faltan para Gratis</div></div>';
+    html += '</div>';
+    html += '<div style="margin-top:15px;"><strong>Progreso:</strong>';
+    html += '<div class="progress-bar"><div class="fill ' + (tieneDerecho ? 'completo' : '') + '" style="width:' + (tieneDerecho ? 100 : progreso) + '%"></div></div></div>';
+    if (tieneDerecho) {
+        html += '<div style="margin-top:15px;padding:15px;background:#fef3c7;border-radius:8px;text-align:center;">';
+        html += '<strong style="color:#92400e;font-size:1.1rem;">\ud83c\udf89 \u00a1TIENE DERECHO A 1 MASAJE GRATIS!</strong><br>';
+        html += '<button class="btn-regalo" onclick="canjearMasajeGratis(' + clienteId + ')" style="margin-top:10px;padding:10px 20px;font-size:16px;">\ud83c\udf81 Canjear Masaje Gratis</button>';
+        html += '</div>';
+    }
+    document.getElementById('contenido-fidelidad').innerHTML = html;
+    document.getElementById('ficha-fidelidad').style.display = 'block';
+}
+
+function filtrarClientes() {
+    var texto = document.getElementById('busqueda-clientes').value.toLowerCase().trim();
+    if (!texto) { clientesFiltrados = [...clientes]; } 
+    else {
+        clientesFiltrados = clientes.filter(function(c) {
+            var nombre = (c.nombre || '').toLowerCase();
+            var telefono = (c.telefono || '').toLowerCase();
+            var email = (c.email || '').toLowerCase();
+            return nombre.includes(texto) || telefono.includes(texto) || email.includes(texto);
+        });
+    }
+    document.getElementById('contador-resultados').textContent = clientesFiltrados.length + ' de ' + clientes.length + ' clientes';
+    actualizarTablaClientes();
+}
+
+function actualizarTablaClientes() {
+    var lista = clientesFiltrados.length > 0 ? clientesFiltrados : clientes;
+    var html1 = '';
+    var sel = '<option value="">Cliente...</option>';
+    var selCobro = '<option value="">Cliente (opcional)...</option>';
+    lista.forEach(function(c) {
+        if (c.puntosFidelidad === undefined) c.puntosFidelidad = 0;
+        if (c.masajesGratis === undefined) c.masajesGratis = 0;
+        var puntosRestantes = 10 - (c.puntosFidelidad % 10);
+        var tieneDerecho = puntosRestantes === 10 && c.puntosFidelidad > 0;
+        var badge = '';
+        if (tieneDerecho) { badge = '<span class="badge-fidelidad listo">\ud83c\udf81 GRATIS</span>'; } 
+        else if (puntosRestantes <= 3) { badge = '<span class="badge-fidelidad cerca">' + puntosRestantes.toFixed(1) + ' pts para gratis</span>'; } 
+        else { badge = '<span class="badge-fidelidad normal">' + c.puntosFidelidad.toFixed(1) + ' puntos</span>'; }
+        html1 += '<tr>';
+        html1 += '<td><strong>' + c.nombre + '</strong>' + badge + '</td>';
+        html1 += '<td>' + c.telefono + '</td>';
+        html1 += '<td>' + (c.email || '-') + '</td>';
+        html1 += '<td style="text-align:center;"><strong>' + c.puntosFidelidad.toFixed(1) + '</strong></td>';
+        html1 += '<td style="text-align:center;"><strong style="color:#f59e0b;">' + c.masajesGratis + '</strong></td>';
+        html1 += '<td>';
+        html1 += '<button class="btn-editar" onclick="editarCliente(' + c.id + ')">Editar</button>';
+        html1 += '<button class="btn-editar" onclick="mostrarFichaFidelidad(' + c.id + ')" style="background:#f59e0b;">\ud83c\udf81 Fidelidad</button>';
+        html1 += '<button class="btn-eliminar" onclick="eliminarCliente(' + c.id + ')">Eliminar</button>';
+        html1 += '</td></tr>';
+        sel += '<option>' + c.nombre + '</option>';
+        selCobro += '<option>' + c.nombre + '</option>';
+    });
+    document.getElementById('tb2').innerHTML = html1 || '<tr><td colspan="6" style="text-align:center;color:#64748b;">No hay clientes</td></tr>';
+    document.getElementById('c1').innerHTML = sel;
+    document.getElementById('cb4').innerHTML = selCobro;
+}
+
+function guardarTarifasAutomatico() { guardarTarifas(false); }
+function guardarTarifas(mostrarMensaje) {
+    var nuevosPrecios = {};
+    var servicios = ['relajante', 'terapeutico', 'descontracturante', 'espalda', 'piernas', 'deportivo', 'rtp'];
+    var duraciones = ['60', '90', '120'];
+    servicios.forEach(function(serv) {
+        duraciones.forEach(function(dur) {
+            var inputId = 'precio_' + serv + '_' + dur;
+            var valor = parseFloat(document.getElementById(inputId).value) || 0;
+            nuevosPrecios[serv + '_' + dur] = valor;
+        });
+    });
+    tarifas = nuevosPrecios;
+    localStorage.setItem('tarifas', JSON.stringify(tarifas));
+    if (mostrarMensaje) mostrarEstado('\u2705 Tarifas guardadas', 3000);
+}
+function cargarTarifasEnFormulario() {
+    var servicios = ['relajante', 'terapeutico', 'descontracturante', 'espalda', 'piernas', 'deportivo', 'rtp'];
+    var duraciones = ['60', '90', '120'];
+    servicios.forEach(function(serv) {
+        duraciones.forEach(function(dur) {
+            var inputId = 'precio_' + serv + '_' + dur;
+            document.getElementById(inputId).value = tarifas[serv + '_' + dur] || 0;
+        });
+    });
+}
+function cargarTarifasPorDefecto() {
+    if (confirm('\u00bfRestaurar los precios por defecto?')) {
+        tarifas = {...tarifasPorDefecto};
+        localStorage.setItem('tarifas', JSON.stringify(tarifas));
+        cargarTarifasEnFormulario();
+        mostrarEstado('\u2705 Precios por defecto restaurados', 3000);
+    }
+}
+
+function guardarCliente(e) {
+    e.preventDefault();
+    var datos = { 
+        id: editandoCliente ? editandoCliente : Date.now(), 
+        nombre: document.getElementById('nm1').value, 
+        telefono: document.getElementById('ph1').value, 
+        email: document.getElementById('em1').value, 
+        notas: document.getElementById('nt2').value,
+        puntosFidelidad: editandoCliente ? (clientes.find(function(c) { return c.id === editandoCliente; }).puntosFidelidad || 0) : 0,
+        masajesGratis: editandoCliente ? (clientes.find(function(c) { return c.id === editandoCliente; }).masajesGratis || 0) : 0
+    };
+    if (editandoCliente) { 
+        var idx = clientes.findIndex(function(c) { return c.id === editandoCliente; }); 
+        if (idx !== -1) clientes[idx] = datos; 
+    } else { clientes.push(datos); }
+    localStorage.setItem('c', JSON.stringify(clientes)); 
+    datosCambiados = true; 
+    cancelarEdicionCliente(); 
+    actualizar(); 
+    actualizarTablaClientes();
+    mostrarEstado('\u2705 Cliente guardado', 2000);
+}
+
+function guardarCita(e) {
+    e.preventDefault();
+    var fecha = document.getElementById('d1').value;
+    var hora = document.getElementById('t1').value;
+    var duracion = document.querySelector('input[name="duracion"]:checked').value;
+    var esGratis = document.getElementById('esGratis').checked;
+    var clienteNombre = document.getElementById('c1').value;
+    var puntos = getPuntosPorDuracion(duracion);
+    if (verificarSolapamiento(fecha, hora, parseInt(duracion), editandoCita)) {
+        alert('\u274c Error: Ya existe una cita en ese horario o en un horario cercano que entrar\u00eda en conflicto.\n\nPor favor, selecciona otra hora disponible.');
+        return;
+    }
+    var datos = { 
+        id: editandoCita ? editandoCita : Date.now(), 
+        fecha: fecha, hora: hora, cliente: clienteNombre, 
+        servicio: document.getElementById('sv1').value, 
+        duracion: duracion, 
+        precio: parseFloat(document.getElementById('p1').value) || 0, 
+        cobrado: false, esGratis: esGratis,
+        notas: document.getElementById('nt1').value 
+    };
+    if (editandoCita) { 
+        var idx = citas.findIndex(function(c) { return c.id === editandoCita; }); 
+        if (idx !== -1) { datos.cobrado = citas[idx].cobrado; citas[idx] = datos; } 
+    } else { 
+        citas.push(datos); 
+        if (clienteNombre && !esGratis) {
+            var cliente = clientes.find(function(c) { return c.nombre === clienteNombre; });
+            if (cliente) {
+                if (cliente.puntosFidelidad === undefined) cliente.puntosFidelidad = 0;
+                cliente.puntosFidelidad += puntos;
+                localStorage.setItem('c', JSON.stringify(clientes));
+                if (cliente.puntosFidelidad >= 10 && (cliente.puntosFidelidad - puntos) < 10) {
+                    setTimeout(function() {
+                        alert('\ud83c\udf89 \u00a1' + cliente.nombre + ' ha alcanzado los 10 puntos de fidelidad!\n\nTiene derecho a 1 masaje GRATIS de 60 minutos.\n\nPuedes canjearlo desde la ficha de fidelidad del cliente.');
+                    }, 500);
+                }
+            }
+        } else if (clienteNombre && esGratis) {
+            var cliente = clientes.find(function(c) { return c.nombre === clienteNombre; });
+            if (cliente) {
+                if (cliente.puntosFidelidad === undefined) cliente.puntosFidelidad = 0;
+                if (cliente.masajesGratis === undefined) cliente.masajesGratis = 0;
+                cliente.masajesGratis++;
+                cliente.puntosFidelidad = 0;
+                localStorage.setItem('c', JSON.stringify(clientes));
+            }
+        }
+    }
+    localStorage.setItem('a', JSON.stringify(citas)); 
+    datosCambiados = true; 
+    cancelarEdicionCita(); 
+    actualizar(); 
+    actualizarCaja(); 
+    actualizarTablaClientes();
+    mostrarEstado('\u2705 Cita guardada', 2000);
+}
+
+function editarCliente(id) {
+    var c = clientes.find(function(x) { return x.id === id; }); 
+    if (!c) return;
+    editandoCliente = id;
+    document.getElementById('nm1').value = c.nombre; 
+    document.getElementById('ph1').value = c.telefono; 
+    document.getElementById('em1').value = c.email || ''; 
+    document.getElementById('nt2').value = c.notas || '';
+    document.getElementById('btn-cliente').textContent = 'Actualizar Cliente'; 
+    document.getElementById('btn-cancelar-cliente').style.display = 'inline-block'; 
+    document.getElementById('card-cliente').classList.add('editando'); 
+    mostrarFichaFidelidad(id);
+    window.scrollTo(0, 0);
+}
+
+function editarCita(id) {
+    var c = citas.find(function(x) { return x.id === id; }); 
+    if (!c) return;
+    editandoCita = id;
+    document.getElementById('d1').value = c.fecha; 
+    document.getElementById('t1').value = c.hora; 
+    document.getElementById('c1').value = c.cliente; 
+    document.getElementById('sv1').value = c.servicio;
+    var duracionRadio = document.getElementById('dur' + (c.duracion || 60)); 
+    if (duracionRadio) duracionRadio.checked = true;
+    document.getElementById('p1').value = c.precio || ''; 
+    document.getElementById('nt1').value = c.notas || '';
+    document.getElementById('esGratis').checked = c.esGratis || false;
+    mostrarInfoFidelidad(c.cliente);
+    document.getElementById('c1').disabled = false;
+    document.getElementById('sv1').disabled = false;
+    document.getElementById('duracion-container').classList.remove('deshabilitado');
+    document.getElementById('duracion-container').classList.add('activo');
+    document.querySelectorAll('input[name="duracion"]').forEach(function(r) { r.disabled = false; });
+    document.getElementById('p1').disabled = false;
+    document.getElementById('label-gratis').classList.remove('deshabilitado');
+    document.getElementById('label-gratis').classList.add('activo');
+    document.getElementById('esGratis').disabled = false;
+    document.getElementById('nt1').disabled = false;
+    document.getElementById('btn-cita').disabled = false;
+    document.getElementById('btn-cita').textContent = 'Actualizar Cita';
+    document.getElementById('btn-cancelar-cita').style.display = 'inline-block'; 
+    document.getElementById('card-cita').classList.add('editando'); 
+    window.scrollTo(0, 0);
+    if (c.fecha) { mostrarVisualizadorHorarios(c.fecha); }
+}
+
+function cancelarEdicionCliente() { 
+    editandoCliente = null; 
+    document.getElementById('f2').reset(); 
+    document.getElementById('btn-cliente').textContent = 'Guardar Cliente'; 
+    document.getElementById('btn-cancelar-cliente').style.display = 'none'; 
+    document.getElementById('card-cliente').classList.remove('editando'); 
+    document.getElementById('ficha-fidelidad').style.display = 'none';
+}
+
+function cancelarEdicionCita() { 
+    editandoCita = null; 
+    document.getElementById('f1').reset(); 
+    document.getElementById('d1').valueAsDate = new Date(); 
+    document.querySelector('input[name="duracion"][value="60"]').checked = true; 
+    document.getElementById('info-precio').style.display = 'none'; 
+    document.getElementById('aviso-fidelidad').style.display = 'none';
+    document.getElementById('esGratis').checked = false;
+    document.getElementById('btn-cita').textContent = 'Guardar Cita'; 
+    document.getElementById('btn-cancelar-cita').style.display = 'none'; 
+    document.getElementById('card-cita').classList.remove('editando');
+    document.getElementById('c1').disabled = true;
+    document.getElementById('c1').value = '';
+    document.getElementById('c1').options[0].text = 'Primero selecciona fecha y hora...';
+    document.getElementById('sv1').disabled = true;
+    document.getElementById('sv1').value = '';
+    document.getElementById('sv1').options[0].text = 'Primero selecciona un cliente...';
+    resetearDesdeDuracion();
+    document.getElementById('visualizador-horarios').style.display = 'none';
+    document.getElementById('visualizador-horarios').classList.remove('activo');
+    ocultarAlertaSolapamiento();
+}
+
+function eliminarCliente(id) { 
+    if(confirm('\u00bfEliminar este cliente?')) { 
+        clientes = clientes.filter(function(c) { return c.id !== id; }); 
+        localStorage.setItem('c', JSON.stringify(clientes)); 
+        datosCambiados = true; 
+        actualizar(); 
+        actualizarTablaClientes();
+        mostrarEstado('\ud83d\uddd1\ufe0f Cliente eliminado', 2000); 
+    } 
+}
+function eliminarCita(id) { 
+    if(confirm('\u00bfEliminar esta cita?')) { 
+        citas = citas.filter(function(c) { return c.id !== id; }); 
+        localStorage.setItem('a', JSON.stringify(citas)); 
+        datosCambiados = true; 
+        actualizar(); 
+        actualizarCaja(); 
+        mostrarEstado('\ud83d\uddd1\ufe0f Cita eliminada', 2000); 
+    } 
+}
+
+function cobrarCita(id) {
+    var c = citas.find(function(x) { return x.id === id; });
+    if (!c) return;
+    cobroPendiente = c;
+    metodoSeleccionado = null;
+    document.getElementById('modal-cliente-info').innerHTML = '<strong>' + c.cliente + '</strong><br>' + c.servicio + ' (' + c.duracion + ' min)';
+    document.getElementById('modal-importe').textContent = c.precio.toFixed(2) + '\u20ac';
+    document.querySelectorAll('.metodo-pago').forEach(function(el) { el.classList.remove('selected'); });
+    document.getElementById('modal-cobro').classList.add('visible');
+}
+
+function seleccionarMetodo(metodo, elemento) {
+    metodoSeleccionado = metodo;
+    document.querySelectorAll('.metodo-pago').forEach(function(el) { el.classList.remove('selected'); });
+    elemento.classList.add('selected');
+}
+
+function confirmarCobro() {
+    if (!cobroPendiente) return;
+    if (!metodoSeleccionado) { alert('\u26a0\ufe0f Por favor, selecciona un m\u00e9todo de pago'); return; }
+    var c = cobroPendiente;
+    cobros.push({
+        id: Date.now(),
+        fecha: new Date().toISOString().split('T')[0],
+        importe: c.precio,
+        metodo: metodoSeleccionado,
+        cliente: c.cliente,
+        concepto: c.servicio + ' (' + c.duracion + ' min)' + (c.esGratis ? ' [GRATIS]' : ''),
+        notas: 'Cobro de cita del ' + c.fecha
+    });
+    c.cobrado = true;
+    localStorage.setItem('a', JSON.stringify(citas));
+    localStorage.setItem('cobros', JSON.stringify(cobros));
+    datosCambiados = true;
+    cerrarModalCobro();
+    actualizar();
+    actualizarCaja();
+    mostrarEstado('\u2705 Cobro registrado por ' + metodoSeleccionado, 2000);
+}
+
+function cerrarModalCobro() {
+    document.getElementById('modal-cobro').classList.remove('visible');
+    cobroPendiente = null;
+    metodoSeleccionado = null;
+}
+
+document.getElementById('modal-cobro').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModalCobro();
+});
+
+function eliminarCobro(id) { 
+    if(confirm('\u00bfEliminar este cobro?')) { 
+        cobros = cobros.filter(function(c) { return c.id !== id; }); 
+        localStorage.setItem('cobros', JSON.stringify(cobros)); 
+        datosCambiados = true; 
+        actualizarCaja(); 
+        actualizarGraficos(); 
+        mostrarEstado('\ud83d\uddd1\ufe0f Cobro eliminado', 2000); 
+    } 
+}
+
+document.getElementById('f3').onsubmit = function(e) {
+    e.preventDefault();
+    cobros.push({ 
+        id: Date.now(), 
+        fecha: document.getElementById('cb1').value, 
+        importe: parseFloat(document.getElementById('cb2').value), 
+        metodo: document.getElementById('cb3').value, 
+        cliente: document.getElementById('cb4').value, 
+        concepto: document.getElementById('cb5').value, 
+        notas: document.getElementById('cb6').value 
+    });
+    localStorage.setItem('cobros', JSON.stringify(cobros)); 
+    this.reset(); 
+    document.getElementById('cb1').valueAsDate = new Date(); 
+    datosCambiados = true; 
+    actualizarCaja(); 
+    actualizarGraficos(); 
+    mostrarEstado('\u2705 Cobro registrado', 2000);
+};
+
+document.getElementById('p1').addEventListener('input', function() {
+    var btnGuardar = document.getElementById('btn-cita');
+    if (this.value && parseFloat(this.value) > 0) {
+        btnGuardar.disabled = false;
+        btnGuardar.textContent = 'Guardar Cita';
+    } else {
+        btnGuardar.disabled = true;
+        btnGuardar.textContent = 'Introduce el precio para guardar';
+    }
+});
+
+function exportar() {
+    var d = { clientes: clientes, citas: citas, cobros: cobros, tarifas: tarifas, fecha: new Date().toISOString() };
+    var b = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+    var u = URL.createObjectURL(b); 
+    var a = document.createElement('a'); 
+    a.href = u; 
+    a.download = 'backup_manos_de_luz_' + new Date().toISOString().split('T')[0] + '.json'; 
+    a.click(); 
+    URL.revokeObjectURL(u);
+    datosCambiados = false; 
+    mostrarEstado('\ud83d\udcbe Copia de seguridad guardada', 3000);
+}
+
+window.addEventListener('beforeunload', function(e) {
+    if (clientes.length > 0 || citas.length > 0 || cobros.length > 0) { exportarAutomatico(); }
+});
+window.addEventListener('unload', function() {
+    localStorage.setItem('c', JSON.stringify(clientes));
+    localStorage.setItem('a', JSON.stringify(citas));
+    localStorage.setItem('cobros', JSON.stringify(cobros));
+    localStorage.setItem('tarifas', JSON.stringify(tarifas));
+});
+
+function exportarAutomatico() {
+    try {
+        var d = { clientes: clientes, citas: citas, cobros: cobros, tarifas: tarifas, fecha: new Date().toISOString() };
+        var b = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+        var u = URL.createObjectURL(b); 
+        var a = document.createElement('a'); 
+        a.href = u; 
+        a.download = 'backup_automatico_' + new Date().toISOString().split('T')[0] + '_' + new Date().toISOString().split('T')[1].replace(/:/g, '-') + '.json';
+        document.body.appendChild(a); 
+        a.click(); 
+        document.body.removeChild(a); 
+        URL.revokeObjectURL(u);
+    } catch(e) { console.log('No se pudo exportar autom\u00e1ticamente:', e); }
+}
+
+function mostrarEstado(mensaje, duracion) { 
+    var el = document.getElementById('estado'); 
+    el.textContent = mensaje; 
+    el.classList.add('visible'); 
+    setTimeout(function() { el.classList.remove('visible'); }, duracion); 
+}
+
+function cambiarGrafico() {
+    document.getElementById('filtro-dia').style.display = document.getElementById('grafico-periodo').value === 'dia' ? 'block' : 'none';
+    document.getElementById('filtro-mes').style.display = document.getElementById('grafico-periodo').value === 'mes' ? 'flex' : 'none';
+    document.getElementById('filtro-anio').style.display = document.getElementById('grafico-periodo').value === 'a\u00f1o' ? 'block' : 'none';
+    actualizarGraficos();
+}
+
+function inicializarGraficos() {
+    var anioActual = new Date().getFullYear();
+    document.getElementById('grafico-anio').innerHTML = ''; 
+    document.getElementById('grafico-anio2').innerHTML = '';
+    for (var i = anioActual; i >= anioActual - 5; i--) {
+        document.getElementById('grafico-anio').innerHTML += '<option value="' + i + '">' + i + '</option>';
+        document.getElementById('grafico-anio2').innerHTML += '<option value="' + i + '">' + i + '</option>';
+    }
+    document.getElementById('grafico-mes').value = new Date().getMonth();
+    document.getElementById('grafico-fecha').valueAsDate = new Date();
+    actualizarGraficos();
+}
+
+function actualizarGraficos() {
+    var periodo = document.getElementById('grafico-periodo').value;
+    var ctx1 = document.getElementById('graficoIngresos').getContext('2d');
+    var ctx2 = document.getElementById('graficoMetodos').getContext('2d');
+    var datos = obtenerDatosGrafico(periodo);
+    if (graficoIngresos) graficoIngresos.destroy(); 
+    if (graficoMetodos) graficoMetodos.destroy();
+    graficoIngresos = new Chart(ctx1, { 
+        type: periodo === 'dia' ? 'bar' : 'line', 
+        data: { labels: datos.labels, datasets: [{ label: 'Ingresos (\u20ac)', data: datos.valores, backgroundColor: 'rgba(13, 148, 136, 0.5)', borderColor: '#0d9488', borderWidth: 2, fill: true }] }, 
+        options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Ingresos por ' + (periodo === 'dia' ? 'Hora del D\u00eda' : periodo === 'mes' ? 'D\u00eda del Mes' : 'Mes del A\u00f1o') } }, scales: { y: { beginAtZero: true, ticks: { callback: function(value) { return value + '\u20ac'; } } } } } 
+    });
+    graficoMetodos = new Chart(ctx2, { 
+        type: 'doughnut', 
+        data: { labels: datos.metodosLabels, datasets: [{ data: datos.metodosValores, backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'] }] }, 
+        options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Distribuci\u00f3n por M\u00e9todo de Pago' } } } 
+    });
+}
+
+function obtenerDatosGrafico(periodo) {
+    var hoy = new Date().toISOString().split('T')[0];
+    var cobrosFiltrados = cobros;
+    var labels = [], valores = [], metodosLabels = ['Efectivo', 'Tarjeta', 'Bizum', 'Transferencia'], metodosValores = [0, 0, 0, 0];
+    if (periodo === 'dia') {
+        var fechaSel = document.getElementById('grafico-fecha').value || hoy;
+        for (var h = 9; h <= 21; h++) { labels.push(h + ':00'); valores.push(0); }
+        citas.filter(function(c) { return c.fecha === fechaSel && c.cobrado; }).forEach(function(cita) {
+            var horaCita = parseInt(cita.hora.split(':')[0]);
+            if (horaCita >= 9 && horaCita <= 21) { valores[horaCita - 9] += cita.precio; }
+        });
+        cobrosFiltrados.filter(function(c) { return c.fecha === fechaSel; }).forEach(function(c) { 
+            if(c.metodo==='Efectivo') metodosValores[0]+=c.importe; 
+            else if(c.metodo==='Tarjeta') metodosValores[1]+=c.importe; 
+            else if(c.metodo==='Bizum') metodosValores[2]+=c.importe; 
+            else if(c.metodo==='Transferencia') metodosValores[3]+=c.importe; 
+        });
+    } else if (periodo === 'mes') {
+        var mesSel = parseInt(document.getElementById('grafico-mes').value), anioSel = parseInt(document.getElementById('grafico-anio').value), dias = new Date(anioSel, mesSel + 1, 0).getDate();
+        for (var d = 1; d <= dias; d++) { 
+            labels.push(d); 
+            var fStr = anioSel + '-' + String(mesSel + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0'); 
+            var total = 0; 
+            cobrosFiltrados.filter(function(c) { return c.fecha === fStr; }).forEach(function(c) { 
+                total += c.importe; 
+                if(c.metodo==='Efectivo') metodosValores[0]+=c.importe; 
+                else if(c.metodo==='Tarjeta') metodosValores[1]+=c.importe; 
+                else if(c.metodo==='Bizum') metodosValores[2]+=c.importe; 
+                else if(c.metodo==='Transferencia') metodosValores[3]+=c.importe; 
+            }); 
+            valores.push(total); 
+        }
+    } else if (periodo === 'a\u00f1o') {
+        var anioSel2 = parseInt(document.getElementById('grafico-anio2').value), meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        for (var m = 0; m < 12; m++) { 
+            labels.push(meses[m]); 
+            var total = 0; 
+            cobrosFiltrados.filter(function(c) { var fc = new Date(c.fecha); return fc.getFullYear() === anioSel2 && fc.getMonth() === m; }).forEach(function(c) { 
+                total += c.importe; 
+                if(c.metodo==='Efectivo') metodosValores[0]+=c.importe; 
+                else if(c.metodo==='Tarjeta') metodosValores[1]+=c.importe; 
+                else if(c.metodo==='Bizum') metodosValores[2]+=c.importe; 
+                else if(c.metodo==='Transferencia') metodosValores[3]+=c.importe; 
+            }); 
+            valores.push(total); 
+        }
+    }
+    return { labels: labels, valores: valores, metodosLabels: metodosLabels, metodosValores: metodosValores };
+}
+
+function filtrarListadoMasajes() { actualizarListadoMasajes(); }
+
+function actualizarListadoMasajes() {
+    var fechaInicio = document.getElementById('filtro-fecha-inicio').value;
+    var fechaFin = document.getElementById('filtro-fecha-fin').value;
+    var clienteFiltro = document.getElementById('filtro-cliente').value;
+    var servicioFiltro = document.getElementById('filtro-servicio').value;
+    var textoBusqueda = document.getElementById('busqueda-masajes') ? document.getElementById('busqueda-masajes').value.toLowerCase().trim() : '';
+    var selectCliente = document.getElementById('filtro-cliente');
+    if (selectCliente.options.length <= 1) {
+        clientes.forEach(function(c) { selectCliente.innerHTML += '<option>' + c.nombre + '</option>'; });
+    }
+    var citasFiltradas = citas.filter(function(c) {
+        var cumpleFecha = true;
+        if (fechaInicio && c.fecha < fechaInicio) cumpleFecha = false;
+        if (fechaFin && c.fecha > fechaFin) cumpleFecha = false;
+        var cumpleCliente = !clienteFiltro || c.cliente === clienteFiltro;
+        var cumpleServicio = !servicioFiltro || c.servicio === servicioFiltro;
+        var cumpleBusqueda = true;
+        if (textoBusqueda) {
+            var textoCita = (c.fecha + ' ' + c.hora + ' ' + c.cliente + ' ' + c.servicio + ' ' + c.duracion).toLowerCase();
+            cumpleBusqueda = textoCita.includes(textoBusqueda);
+        }
+        return cumpleFecha && cumpleCliente && cumpleServicio && cumpleBusqueda;
+    });
+    citasFiltradas.sort(function(a, b) { return new Date(a.fecha + 'T' + a.hora) - new Date(b.fecha + 'T' + b.hora); });
+    var html = '';
+    citasFiltradas.forEach(function(c) {
+        var metodoPago = '-';
+        var cobro = cobros.find(function(cb) { return cb.cliente === c.cliente && cb.concepto.includes(c.servicio) && cb.fecha === c.fecha; });
+        if (cobro) { metodoPago = cobro.metodo; }
+        var estado = c.cobrado ? '<span style="color:#10b981;">\u2713 Cobrado</span>' : '<span style="color:#f59e0b;">\u23f3 Pendiente</span>';
+        html += '<tr>';
+        html += '<td>' + c.fecha + '</td>';
+        html += '<td>' + c.hora + '</td>';
+        html += '<td>' + c.cliente + '</td>';
+        html += '<td>' + c.servicio + ' (' + c.duracion + ' min)</td>';
+        html += '<td>' + c.duracion + ' min</td>';
+        html += '<td>' + (c.precio ? c.precio.toFixed(2) + '\u20ac' : '-') + '</td>';
+        html += '<td>' + metodoPago + '</td>';
+        html += '<td>' + estado + '</td>';
+        html += '</tr>';
+    });
+    document.getElementById('tb-listado-masajes').innerHTML = html || '<tr><td colspan="8" style="text-align:center;color:#64748b;">No hay masajes que coincidan con los filtros</td></tr>';
+}
+
+function actualizarCaja() {
+    var hoy = new Date().toISOString().split('T')[0];
+    var cobrosFiltrados = cobros;
+    var totalHoy = 0, efectivo = 0, tarjeta = 0;
+    cobrosFiltrados.forEach(function(c) { totalHoy += c.importe; if (c.metodo === 'Efectivo') efectivo += c.importe; else if (c.metodo === 'Tarjeta') tarjeta += c.importe; });
+    var pendiente = 0; citas.forEach(function(c) { if (!c.cobrado && c.precio > 0) pendiente += c.precio; });
+    document.getElementById('caja-hoy').textContent = totalHoy.toFixed(2) + '\u20ac';
+    document.getElementById('caja-efectivo').textContent = efectivo.toFixed(2) + '\u20ac';
+    document.getElementById('caja-tarjeta').textContent = tarjeta.toFixed(2) + '\u20ac';
+    document.getElementById('caja-pendiente').textContent = pendiente.toFixed(2) + '\u20ac';
+    var html = ''; 
+    var sorted = cobrosFiltrados.slice().sort(function(a, b) { return new Date(b.fecha) - new Date(a.fecha); });
+    sorted.forEach(function(c) { 
+        html += '<tr><td>' + c.fecha + '</td><td style="font-weight:bold;color:#10b981;">' + c.importe.toFixed(2) + '\u20ac</td><td>' + c.metodo + '</td><td>' + (c.cliente || '-') + '</td><td>' + (c.concepto || '-') + '</td><td><button class="btn-eliminar" onclick="eliminarCobro(' + c.id + ')">Eliminar</button></td></tr>'; 
+    });
+    document.getElementById('tb3').innerHTML = html || '<tr><td colspan="6" style="text-align:center;color:#64748b;">No hay cobros registrados</td></tr>';
+}
+
+function actualizar() {
+    document.getElementById('n1').textContent = clientes.length;
+    var hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('n2').textContent = citas.filter(function(c) { return c.fecha === hoy; }).length;
+    var cobrosHoy = cobros.filter(function(c) { return c.fecha === hoy; });
+    var totalCobrosHoy = 0; cobrosHoy.forEach(function(c) { totalCobrosHoy += c.importe; });
+    document.getElementById('n4').textContent = totalCobrosHoy.toFixed(2) + '\u20ac';
+    var html2 = ''; 
+    var sorted = citas.slice().sort(function(a, b) { return new Date(a.fecha + 'T' + a.hora) - new Date(b.fecha + 'T' + b.hora); });
+    sorted.forEach(function(c) {
+        var duracionText = c.duracion ? ' (' + c.duracion + ' min)' : '';
+        var estado = c.cobrado ? '<span style="background:#d1fae5;color:#065f46;padding:4px 8px;border-radius:4px;font-size:12px;">\u2713 Cobrado</span>' : '<span style="background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:4px;font-size:12px;">\u23f3 Pendiente</span>';
+        var btnCobrar = c.cobrado ? '' : '<button class="btn-cobrar" onclick="cobrarCita(' + c.id + ')">Cobrar</button>';
+        var gratisTag = c.esGratis ? ' <span style="background:#f59e0b;color:white;padding:2px 6px;border-radius:4px;font-size:11px;">GRATIS</span>' : '';
+        html2 += '<tr class="' + (c.cobrado ? 'cobrado' : 'pendiente-pago') + '"><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + duracionText + gratisTag + '</td><td>' + (c.duracion ? c.duracion + ' min' : '') + '</td><td>' + (c.precio ? c.precio.toFixed(2) + '\u20ac' : '-') + '</td><td>' + estado + '</td><td>' + btnCobrar + '<button class="btn-editar" onclick="editarCita(' + c.id + ')">Editar</button><button class="btn-eliminar" onclick="eliminarCita(' + c.id + ')">Eliminar</button></td></tr>';
+    });
+    document.getElementById('tb1').innerHTML = html2;
+    var prox = sorted.find(function(c) { return new Date(c.fecha + 'T' + c.hora) >= new Date(); });
+    document.getElementById('n3').textContent = prox ? (prox.cliente + ' (' + prox.fecha + ' ' + prox.hora + ') - ' + prox.servicio) : 'Ninguna';
+    var hd = ''; 
+    sorted.slice(0, 5).forEach(function(c) { hd += '<div style="padding:10px;background:#f9fafb;margin:5px 0;border-radius:4px;"><strong>' + c.cliente + '</strong> - ' + c.servicio + ' (' + c.fecha + ' ' + c.hora + ')</div>'; });
+    document.getElementById('dc').innerHTML = hd || '<p>No hay citas</p>';
+}
+
+document.getElementById('f2').onsubmit = guardarCliente;
+document.getElementById('f1').onsubmit = guardarCita;
+document.getElementById('d1').valueAsDate = new Date();
+document.getElementById('cb1').valueAsDate = new Date();
+actualizar(); actualizarCaja(); actualizarTablaClientes();
+</script>
+</body>
+</html>
