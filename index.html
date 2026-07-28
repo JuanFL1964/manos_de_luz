@@ -59,11 +59,12 @@ function iniciarSincronizacion() {
         actualizarListadoMasajes();
     });
     db.collection('cobros').onSnapshot(snapshot => {
-        cobros = [];
-        snapshot.forEach(doc => { cobros.push({id: doc.id, ...doc.data()}); });
-        actualizarCaja();
-        actualizarGraficos();
-    });
+    cobros = [];
+    snapshot.forEach(doc => { cobros.push({id: doc.id, ...doc.data()}); });
+    actualizarCaja();
+    actualizarGraficos();
+    actualizar();
+});
     db.collection('tarifas').doc('precios').onSnapshot(doc => {
         if (doc.exists) { tarifas = doc.data(); }
         else { tarifas = {...tarifasPorDefecto}; db.collection('tarifas').doc('precios').set(tarifas); }
