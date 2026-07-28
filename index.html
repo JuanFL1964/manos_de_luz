@@ -69,6 +69,7 @@ function iniciarSincronizacion() {
         snapshot.forEach(doc => { cobros.push({id: doc.id, ...doc.data()}); });
         actualizarCaja();
         actualizarGraficos();
+        actualizar();
     });
     db.collection('tarifas').doc('precios').onSnapshot(doc => {
         if (doc.exists) { tarifas = doc.data(); }
