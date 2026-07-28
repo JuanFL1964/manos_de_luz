@@ -142,7 +142,12 @@ function verificarSolapamiento(fecha, horaInicio, duracionMin, citaIdExcluir) {
         var partesCita = citasDia[i].hora.split(':');
         var citaInicio = parseInt(partesCita[0]) * 60 + parseInt(partesCita[1]);
         var citaFin = citaInicio + parseInt(citasDia[i].duracion);
-        if (minInicio < citaFin && (minFin === 0 || minFin > citaInicio)) return true;
+        // Si no hay duración, verificar que el punto exacto esté dentro del rango
+        if (duracionMin === null || duracionMin === 0) {
+            if (minInicio >= citaInicio && minInicio < citaFin) return true;
+        } else {
+            if (minInicio < citaFin && minFin > citaInicio) return true;
+        }
     }
     return false;
 }
