@@ -722,37 +722,229 @@ function actualizarGraficos() {
     var periodo = document.getElementById('grafico-periodo').value;
     var ctx1 = document.getElementById('graficoIngresos').getContext('2d');
     var ctx2 = document.getElementById('graficoMetodos').getContext('2d');
-    var labels = [], valores = [], mLabels = ['Efectivo', 'Tarjeta', 'Bizum', 'Transferencia'], mValores = [0, 0, 0, 0];
+    
+    if (graficoIngresos) graficoIngresos.destroy(); 
+    if (graficoMetodos) graficoMetodos.destroy();
+    
     if (periodo === 'mes') {
-        var mes = parseInt(document.getElementById('grafico-mes').value), anio = parseInt(document.getElementById('grafico-anio').value), dias = new Date(anio, mes + 1, 0).getDate();
+        // ===== GRÁFICO DE BARRAS POR DÍA (estilo Excel) =====
+        var mes = parseInt(document.getElementById('grafico-mes').value);
+        var anio = parseInt(document.getElementById('grafico-anio').value);
+        var dias = new Date(anio, mes + 1, 0).getDate();
+        var labels = [];
+        var valores = [];
+        var mLabels = ['Efectivo', 'Tarjeta', 'Bizum', 'Transferencia'];
+        var mValores = [0, 0, 0, 0];
+        
         for (var d = 1; d <= dias; d++) { 
-            labels.push(d); 
-            var fStr = anio + '-' + String(mes + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0'); 
+            var fStr = anio + '-' + String(mes + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+            labels.push(String(d).padStart(2, '0') + '/' + String(mes + 1).padStart(2, '0') + '/' + anio);
             var total = 0; 
             cobros.filter(function(c) { return c.fecha === fStr; }).forEach(function(c) { 
                 total += c.importe; 
-                if(c.metodo==='Efectivo') mValores[0]+=c.importe; else if(c.metodo==='Tarjeta') mValores[1]+=c.importe; else if(c.metodo==='Bizum') mValores[2]+=c.importe; else if(c.metodo==='Transferencia') mValores[3]+=c.importe; 
+                if(c.metodo==='Efectivo') mValores[0]+=c.importe; 
+                else if(c.metodo==='Tarjeta') mValores[1]+=c.importe; 
+                else if(c.metodo==='Bizum') mValores[2]+=c.importe; 
+                else if(c.metodo==='Transferencia') mValores[3]+=c.importe; 
             }); 
             valores.push(total); 
         }
+        
+        var mesesTexto = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        var tituloGrafico = 'CAJA - ' + mesesTexto[mes].toUpperCase() + ' ' + anio;
+        
+        graficoIngresos = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Ingresos (€)',
+                    data: valores,
+                    backgroundColor: '#1a5276',
+                    borderColor: '#1a5276',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: tituloGrafico,
+                        font: { size: 18, weight: 'bold' },
+                        padding: { bottom: 20 }
+                    },
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Euros (€)' },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 90,
+                            minRotation: 45,
+                            font: { size: 10 }
+                        },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+        
     } else if (periodo === 'año') {
-        var anio2 = parseInt(document.getElementById('grafico-anio2').value), meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        // ===== GRÁFICO DE BARRAS POR MES =====
+        var anio2 = parseInt(document.getElementById('grafico-anio2').value);
+        var meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        var labels = [];
+        var valores = [];
+        var mLabels = ['Efectivo', 'Tarjeta', 'Bizum', 'Transferencia'];
+        var mValores = [0, 0, 0, 0];
+        
         for (var m = 0; m < 12; m++) { 
-            labels.push(meses[m]); 
+            labels.push(meses[m] + '/' + anio2);
             var total = 0; 
-            cobros.filter(function(c) { var fc = new Date(c.fecha); return fc.getFullYear() === anio2 && fc.getMonth() === m; }).forEach(function(c) { 
+            cobros.filter(function(c) { 
+                var fc = new Date(c.fecha); 
+                return fc.getFullYear() === anio2 && fc.getMonth() === m; 
+            }).forEach(function(c) { 
                 total += c.importe; 
-                if(c.metodo==='Efectivo') mValores[0]+=c.importe; else if(c.metodo==='Tarjeta') mValores[1]+=c.importe; else if(c.metodo==='Bizum') mValores[2]+=c.importe; else if(c.metodo==='Transferencia') mValores[3]+=c.importe; 
+                if(c.metodo==='Efectivo') mValores[0]+=c.importe; 
+                else if(c.metodo==='Tarjeta') mValores[1]+=c.importe; 
+                else if(c.metodo==='Bizum') mValores[2]+=c.importe; 
+                else if(c.metodo==='Transferencia') mValores[3]+=c.importe; 
             }); 
             valores.push(total); 
         }
+        
+        graficoIngresos = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Ingresos (€)',
+                    data: valores,
+                    backgroundColor: '#1a5276',
+                    borderColor: '#1a5276',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'CAJA - AÑO ' + anio2,
+                        font: { size: 18, weight: 'bold' },
+                        padding: { bottom: 20 }
+                    },
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Euros (€)' },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+        
+    } else if (periodo === 'dia') {
+        // ===== GRÁFICO DE BARRAS POR HORA =====
+        var fechaSel = document.getElementById('grafico-fecha').value || new Date().toISOString().split('T')[0];
+        var labels = [];
+        var valores = [];
+        var mLabels = ['Efectivo', 'Tarjeta', 'Bizum', 'Transferencia'];
+        var mValores = [0, 0, 0, 0];
+        
+        for (var h = 9; h <= 21; h++) {
+            labels.push(String(h).padStart(2, '0') + ':00');
+            var total = 0;
+            cobros.filter(function(c) { 
+                return c.fecha === fechaSel && c.hora && parseInt(c.hora.split(':')[0]) === h;
+            }).forEach(function(c) {
+                total += c.importe;
+                if(c.metodo==='Efectivo') mValores[0]+=c.importe;
+                else if(c.metodo==='Tarjeta') mValores[1]+=c.importe;
+                else if(c.metodo==='Bizum') mValores[2]+=c.importe;
+                else if(c.metodo==='Transferencia') mValores[3]+=c.importe;
+            });
+            valores.push(total);
+        }
+        
+        var partesFecha = fechaSel.split('-');
+        var fechaFormateada = partesFecha[2] + '/' + partesFecha[1] + '/' + partesFecha[0];
+        
+        graficoIngresos = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Ingresos (€)',
+                    data: valores,
+                    backgroundColor: '#1a5276',
+                    borderColor: '#1a5276',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'CAJA - ' + fechaFormateada,
+                        font: { size: 18, weight: 'bold' },
+                        padding: { bottom: 20 }
+                    },
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Euros (€)' },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
     }
-    if (graficoIngresos) graficoIngresos.destroy(); 
-    if (graficoMetodos) graficoMetodos.destroy();
-    graficoIngresos = new Chart(ctx1, { type: periodo === 'dia' ? 'bar' : 'line', data: { labels: labels, datasets: [{ label: 'Ingresos (€)', data: valores, backgroundColor: 'rgba(13, 148, 136, 0.5)', borderColor: '#0d9488', borderWidth: 2, fill: true }] }, options: { responsive: true, maintainAspectRatio: false } });
-    graficoMetodos = new Chart(ctx2, { type: 'doughnut', data: { labels: mLabels, datasets: [{ data: mValores, backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+    
+    // ===== GRÁFICO DE MÉTODOS DE PAGO (doughnut) =====
+    graficoMetodos = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: ['Efectivo', 'Tarjeta', 'Bizum', 'Transferencia'],
+            datasets: [{
+                data: mValores,
+                backgroundColor: ['#1a5276', '#2980b9', '#8b5cf6', '#f59e0b']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Distribución por Método de Pago',
+                    font: { size: 16, weight: 'bold' },
+                    padding: { bottom: 15 }
+                }
+            }
+        }
+    });
 }
-
 function mostrarEstado(mensaje, duracion) { 
     var el = document.getElementById('estado'); 
     el.textContent = mensaje; 
