@@ -711,17 +711,22 @@ function actualizarCaja() {
     });
     var pendiente = 0; 
     citas.forEach(function(c) { if (!c.cobrado && c.precio > 0) pendiente += c.precio; });
+    
+    // Actualizar caja
     document.getElementById('caja-hoy').textContent = total.toFixed(2) + '€';
     document.getElementById('caja-efectivo').textContent = ef.toFixed(2) + '€';
     document.getElementById('caja-tarjeta').textContent = tar.toFixed(2) + '€';
     document.getElementById('caja-pendiente').textContent = pendiente.toFixed(2) + '€';
+    
+    // Actualizar también el resumen del día
+    document.getElementById('n4').textContent = total.toFixed(2) + '€';
+    
     var html = ''; 
     cobros.slice().sort(function(a, b) { return new Date(b.fecha) - new Date(a.fecha); }).forEach(function(c) { 
         html += '<tr><td>' + c.fecha + '</td><td style="font-weight:bold;color:#10b981;">' + c.importe.toFixed(2) + '€</td><td>' + c.metodo + '</td><td>' + (c.cliente || '-') + '</td><td>' + (c.concepto || '-') + '</td><td><button class="btn-eliminar" onclick="eliminarCobro(\'' + c.id + '\')">Eliminar</button></td></tr>'; 
     });
     document.getElementById('tb3').innerHTML = html || '<tr><td colspan="6" style="text-align:center;">No hay cobros</td></tr>';
 }
-
 function cobrarCita(id) {
     var c = citas.find(function(x) { return x.id === id; });
     if (!c) return;
