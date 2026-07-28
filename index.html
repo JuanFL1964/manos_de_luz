@@ -743,7 +743,7 @@ function confirmarCobro() {
     if (!cobroPendiente || !metodoSeleccionado) { alert('Selecciona un método de pago'); return; }
     var c = cobroPendiente;
     db.collection('cobros').add({
-        fecha: c.fecha,
+        fecha: new Date().toISOString().split('T')[0],
         importe: c.precio,
         metodo: metodoSeleccionado,
         cliente: c.cliente,
