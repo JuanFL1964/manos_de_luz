@@ -968,10 +968,24 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div id="s1" class="section active">
 <h2>Resumen del Día</h2>
 <div class="card">
-<p>Total clientes: <span id="n1" style="font-size:2rem;color:#0d9488;font-weight:bold;">0</span></p>
-<p>Citas hoy: <span id="n2" style="font-size:2rem;color:#3b82f6;font-weight:bold;">0</span></p>
-<p>Próxima cita: <span id="n3" style="color:#8b5cf6;font-weight:bold;">Ninguna</span></p>
-<p>Cobros hoy: <span id="n4" style="font-size:2rem;color:#10b981;font-weight:bold;">0€</span></p>
+<div class="resumen-grid">
+    <div class="resumen-item">
+        <div class="resumen-label">Total clientes</div>
+        <div class="resumen-valor" id="n1" style="color:#0d9488;">0</div>
+    </div>
+    <div class="resumen-item">
+        <div class="resumen-label">Citas hoy</div>
+        <div class="resumen-valor" id="n2" style="color:#3b82f6;">0</div>
+    </div>
+    <div class="resumen-item">
+        <div class="resumen-label">Próxima cita</div>
+        <div class="resumen-valor-small" id="n3" style="color:#8b5cf6;">Ninguna</div>
+    </div>
+    <div class="resumen-item">
+        <div class="resumen-label">Cobros hoy</div>
+        <div class="resumen-valor" id="n4" style="color:#10b981;">0€</div>
+    </div>
+</div>
 </div>
 <div class="card">
 <h3>Próximas citas (hoy)</h3>
