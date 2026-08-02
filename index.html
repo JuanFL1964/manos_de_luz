@@ -806,7 +806,11 @@ th { background: #f0fdfa; color: #0f766e; }
 .alerta-regalo .texto strong { color: #92400e; font-size: 1.1rem; }
 .estado-guardado { position: fixed; bottom: 20px; right: 20px; background: #059669; color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0; transition: opacity 0.3s; z-index: 1000; }
 .estado-guardado.visible { opacity: 1; }
-.stats-caja { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+.resumen-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+.resumen-item { text-align: center; padding: 10px; }
+.resumen-label { font-size: 14px; color: #64748b; margin-bottom: 8px; font-weight: bold; }
+.resumen-valor { font-size: 2.5rem; font-weight: bold; }
+.resumen-valor-small { font-size: 1.2rem; font-weight: bold; }
 .stat-box { background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #0d9488; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 .stat-box h4 { margin: 0 0 10px 0; color: #64748b; font-size: 14px; }
 .stat-box .amount { font-size: 2rem; font-weight: bold; color: #0d9488; }
@@ -929,6 +933,8 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
     .logo { max-width: 100px !important; }
     .reloj-hora { font-size: 18px !important; }
     #btn-exportar, #btn-importar { font-size: 12px !important; padding: 8px 12px !important; }
+  .resumen-grid { grid-template-columns: repeat(2, 1fr) !important; }
+.resumen-valor { font-size: 2rem !important; }
 }
 @media (max-width: 479px) { 
     .header { padding: 5px; } 
