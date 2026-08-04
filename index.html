@@ -142,14 +142,20 @@ window.addEventListener('appinstalled', function() {
     document.getElementById('banner-instalacion').style.display = 'none';
 });
 
+// ===== PREVENIR BOTÓN ATRÁS =====
+window.addEventListener('popstate', function(event) {
+    history.pushState(null, null, window.location.href);
+});
+history.pushState(null, null, window.location.href);
+
 // ===== RESET BASE DE DATOS =====
 function resetearBaseDatos() {
-    var codigo = prompt('⚠️ ATENCIÓN: Esta acción borrará TODOS los datos.\n\nPara confirmar, escribe: RESET\n\n(Se borrarán: clientes, citas y cobros.\nLas tarifas se mantendrán.)');
+    var codigo = prompt('️ ATENCIÓN: Esta acción borrará TODOS los datos.\n\nPara confirmar, escribe: RESET\n\n(Se borrarán: clientes, citas y cobros.\nLas tarifas se mantendrán.)');
     if (codigo !== 'RESET') {
         if (codigo !== null) alert('❌ Código incorrecto. No se ha borrado nada.');
         return;
     }
-    var confirmacion = prompt('🔴 ÚLTIMA CONFIRMACIÓN\n\nEscribe BORRAR para eliminar todos los datos permanentemente.');
+    var confirmacion = prompt(' ÚLTIMA CONFIRMACIÓN\n\nEscribe BORRAR para eliminar todos los datos permanentemente.');
     if (confirmacion !== 'BORRAR') {
         if (confirmacion !== null) alert('❌ Cancelado. No se ha borrado nada.');
         return;
@@ -434,7 +440,6 @@ function mostrarFichaFidelidad(clienteId) {
         html += '</div>';
     }
     
-    // Sección de edición (oculta por defecto)
     html += '<div id="editor-fidelidad" style="display:none;margin-top:20px;padding:15px;background:#fef3c7;border-radius:8px;">';
     html += '<h4 style="margin-top:0;color:#92400e;">✏️ Editar puntos (solo para migración)</h4>';
     html += '<p style="font-size:13px;color:#64748b;margin-bottom:10px;">Si el cliente ya tiene un masaje gratis pendiente, pon 10 puntos. El sistema lo detectará automáticamente.</p>';
@@ -442,7 +447,7 @@ function mostrarFichaFidelidad(clienteId) {
     html += '<label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px;">Puntos acumulados:</label>';
     html += '<input type="number" id="edit-puntos" value="' + puntos + '" step="0.5" min="0" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:16px;">';
     html += '</div>';
-    html += '<button class="btn-regalo" onclick="guardarPuntosEditados(\'' + clienteId + '\')" style="width:100%;padding:12px;font-size:16px;">💾 Guardar cambios</button>';
+    html += '<button class="btn-regalo" onclick="guardarPuntosEditados(\'' + clienteId + '\')" style="width:100%;padding:12px;font-size:16px;"> Guardar cambios</button>';
     html += '<button onclick="ocultarEditorFidelidad()" style="width:100%;padding:10px;margin-top:8px;background:#6b7280;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">✕ Cancelar</button>';
     html += '</div>';
     
@@ -465,37 +470,27 @@ function ocultarEditorFidelidad() {
 
 function guardarPuntosEditados(clienteId) {
     console.log('Guardando puntos para cliente:', clienteId);
-    
     var inputPuntos = document.getElementById('edit-puntos');
     if (!inputPuntos) {
         alert('❌ Error: No se encuentra el campo de puntos');
-        console.error('No se encontró el elemento edit-puntos');
         return;
     }
-    
     var nuevosPuntos = parseFloat(inputPuntos.value);
-    console.log('Nuevos puntos:', nuevosPuntos);
-    
     if (isNaN(nuevosPuntos) || nuevosPuntos < 0) {
         alert('❌ Los puntos deben ser un número válido mayor o igual a 0');
         return;
     }
-    
     var mensaje = '¿Guardar los nuevos valores?\n\nPuntos: ' + nuevosPuntos.toFixed(1);
     if (nuevosPuntos >= 10) {
         mensaje += '\n\n⚠️ El cliente tendrá 1 MASAJE GRATIS disponible';
     }
-    
     if (confirm(mensaje)) {
-        console.log('Actualizando Firebase...');
         db.collection('clientes').doc(clienteId).update({
             puntosFidelidad: nuevosPuntos
         }).then(function() {
-            console.log('✅ Actualizado correctamente');
             alert('✅ Puntos actualizados correctamente');
             mostrarFichaFidelidad(clienteId);
         }).catch(function(err) {
-            console.error('❌ Error:', err);
             alert('❌ Error al guardar: ' + err.message);
         });
     }
@@ -555,11 +550,9 @@ function guardarCita(e) {
             var cliente = clientes.find(function(c) { return c.nombre === clienteNombre; });
             if (cliente) {
                 if (esGratis) {
-                    // Si es masaje gratis, resetear puntos a 0
                     db.collection('clientes').doc(cliente.id).update({puntosFidelidad: 0});
                     mostrarEstado('✅ Cita guardada como GRATIS - Puntos reseteados a 0', 3000);
                 } else {
-                    // Si no es gratis, sumar puntos
                     var nuevosPuntos = (cliente.puntosFidelidad || 0) + puntos;
                     db.collection('clientes').doc(cliente.id).update({puntosFidelidad: nuevosPuntos});
                     if (nuevosPuntos >= 10 && (nuevosPuntos - puntos) < 10) {
@@ -625,7 +618,14 @@ function editarCita(id) {
     mostrarVisualizadorHorarios(c.fecha);
 }
 
-function cancelarEdicionCliente() { editandoCliente = null; document.getElementById('f2').reset(); document.getElementById('btn-cliente').textContent = 'Guardar Cliente'; document.getElementById('btn-cancelar-cliente').style.display = 'none'; document.getElementById('card-cliente').classList.remove('editando'); document.getElementById('ficha-fidelidad').style.display = 'none'; }
+function cancelarEdicionCliente() { 
+    editandoCliente = null; 
+    document.getElementById('f2').reset(); 
+    document.getElementById('btn-cliente').textContent = 'Guardar Cliente'; 
+    document.getElementById('btn-cancelar-cliente').style.display = 'none'; 
+    document.getElementById('card-cliente').classList.remove('editando'); 
+    document.getElementById('ficha-fidelidad').style.display = 'none'; 
+}
 function cancelarEdicionCita() { editandoCita = null; document.getElementById('f1').reset(); document.getElementById('d1').valueAsDate = new Date(); document.querySelector('input[name="duracion"][value="60"]').checked = true; document.getElementById('info-precio').style.display = 'none'; document.getElementById('aviso-fidelidad').style.display = 'none'; document.getElementById('esGratis').checked = false; document.getElementById('btn-cita').textContent = 'Guardar Cita'; document.getElementById('btn-cancelar-cita').style.display = 'none'; document.getElementById('card-cita').classList.remove('editando'); document.getElementById('c1').disabled = true; document.getElementById('c1').value = ''; document.getElementById('sv1').disabled = true; document.getElementById('sv1').value = ''; resetearDesdeDuracion(); document.getElementById('visualizador-horarios').style.display = 'none'; document.getElementById('alerta-solapamiento').classList.remove('visible'); }
 
 function actualizar() {
@@ -892,12 +892,7 @@ function actualizarGraficos() {
 
 function mostrarEstado(mensaje, duracion) { var el = document.getElementById('estado'); el.textContent = mensaje; el.classList.add('visible'); setTimeout(function() { el.classList.remove('visible'); }, duracion); }
 
-// Prevenir botón atrás del navegador
-window.addEventListener('popstate', function(event) {
-    history.pushState(null, null, window.location.href);
-});
-history.pushState(null, null, window.location.href);
-  window.onload = function() {
+window.onload = function() {
     actualizarReloj();
     setInterval(actualizarReloj, 1000);
     iniciarSincronizacion();
@@ -1080,7 +1075,6 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 .resumen-valor { font-size: 2.5rem; font-weight: bold; }
 .resumen-valor-small { font-size: 1.2rem; font-weight: bold; }
 
-/* Banner de instalación PWA */
 .banner-instalacion {
     position: fixed;
     bottom: 0;
@@ -1192,8 +1186,8 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div id="banner-instalacion" class="banner-instalacion">
     <div class="contenido-banner">
         <div class="texto-banner">
-            <h3>📱 Instala Manos de Luz</h3>
-            <p>Instala la aplicación en tu dispositivo para acceder rápidamente y trabajar sin distracciones</p>
+            <h3>📱 Instala la App</h3>
+            <p><strong>Importante:</strong> Instala la aplicación para que funcione como una app real, sin barra de navegador y sin riesgo de salir accidentalmente.</p>
         </div>
         <div class="botones-banner">
             <button class="btn-instalar" onclick="instalarApp()">📲 Instalar Ahora</button>
@@ -1204,7 +1198,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 
 <div class="header">
     <div class="header-izquierda">
-        <div class="header-sync">️ Sincronización activa</div>
+        <div class="header-sync">☁️ Sincronización activa</div>
     </div>
     <div class="header-centro">
         <img src="https://i.imgur.com/0PowleW.png" alt="Manos de Luz" class="logo">
@@ -1218,7 +1212,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 
 <div class="nav">
 <button id="b1" class="active">📊 Resumen</button>
-<button id="b2"> Agenda</button>
+<button id="b2">📅 Agenda</button>
 <button id="b3">👥 Clientes</button>
 <button id="b4">💰 Caja</button>
 <button id="b6">📜 Histórico</button>
@@ -1338,7 +1332,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div id="s3" class="section">
 <h2>Clientes</h2>
 <div class="busqueda-container">
-    <label> Buscar:</label>
+    <label>🔍 Buscar:</label>
     <input type="text" id="busqueda-clientes" placeholder="Escribe nombre, apellido o teléfono..." oninput="filtrarClientes()">
     <span class="contador-resultados" id="contador-resultados"></span>
 </div>
@@ -1354,7 +1348,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </form>
 </div>
 <div id="ficha-fidelidad" class="card" style="display:none;">
-    <h3>🎁 Programa de Fidelización</h3>
+    <h3> Programa de Fidelización</h3>
     <div id="contenido-fidelidad"></div>
 </div>
 <div class="card">
@@ -1448,7 +1442,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </div>
 
 <div id="s6" class="section">
-<h2>📜 Histórico de Citas</h2>
+<h2> Histórico de Citas</h2>
 <div class="stats-historico">
     <div class="stat-hist"><h4>Total citas pasadas</h4><div class="valor" id="hist-contador">0</div></div>
     <div class="stat-hist"><h4>Total cobrado</h4><div class="valor" id="hist-total">0€</div></div>
@@ -1472,7 +1466,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
         </select></div>
     </div>
     <div class="busqueda-rapida">
-        <input type="text" id="hist-busqueda" placeholder=" Buscar en el histórico...">
+        <input type="text" id="hist-busqueda" placeholder="🔍 Buscar en el histórico...">
     </div>
 </div>
 <div class="card">
@@ -1520,12 +1514,12 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <td><div class="input-con-euro"><input type="number" id="precio_rtp_120" step="1" min="0" onchange="guardarTarifas()"></div></td></tr>
 </tbody>
 </table>
-<button class="btn" onclick="cargarTarifasPorDefecto()" style="background:#6b7280; margin-top:20px;">🔄 Restaurar precios por defecto</button>
+<button class="btn" onclick="cargarTarifasPorDefecto()" style="background:#6b7280; margin-top:20px;"> Restaurar precios por defecto</button>
 </div>
 </div>
 </div>
 
-<div id="estado" class="estado-guardado">💾 Guardado en la nube</div>
+<div id="estado" class="estado-guardado"> Guardado en la nube</div>
 
 <div id="modal-cobro" class="modal-overlay">
     <div class="modal-content">
@@ -1535,8 +1529,8 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
         <p style="text-align:center;color:#64748b;margin-bottom:10px;"><strong>Selecciona método de pago:</strong></p>
         <div class="metodos-pago">
             <div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)"><span class="icono">💵</span><span class="nombre">Efectivo</span></div>
-            <div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)"><span class="icono">💳</span><span class="nombre">Tarjeta</span></div>
-            <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)"><span class="icono">📱</span><span class="nombre">Bizum</span></div>
+            <div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)"><span class="icono"></span><span class="nombre">Tarjeta</span></div>
+            <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)"><span class="icono"></span><span class="nombre">Bizum</span></div>
             <div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"><span class="icono">🏦</span><span class="nombre">Transferencia</span></div>
         </div>
         <div class="modal-botones">
