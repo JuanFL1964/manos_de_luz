@@ -394,7 +394,7 @@ function mostrarInfoFidelidad(clienteNombre) {
     var gratis = cliente.masajesGratis || 0;
     var restantes = 10 - (puntos % 10);
     var tieneDerecho = restantes === 10 && puntos > 0;
-    var html = '<div class="alerta-regalo"><div class="icono">🎁</div><div class="texto"><strong>' + cliente.nombre + '</strong><br>Puntos: <strong>' + puntos.toFixed(1) + '</strong> | Gratis: <strong>' + gratis + '</strong><br>';
+    var html = '<div class="alerta-regalo"><div class="icono">F</div><div class="texto"><strong>' + cliente.nombre + '</strong><br>Puntos: <strong>' + puntos.toFixed(1) + '</strong> | Gratis: <strong>' + gratis + '</strong><br>';
     if (tieneDerecho) html += '<span style="color:#f59e0b;">¡TIENE DERECHO A 1 MASAJE GRATIS!</span>';
     else html += 'Faltan <strong>' + restantes.toFixed(1) + ' puntos</strong><div class="progress-bar"><div class="fill" style="width:' + ((puntos % 10) * 10) + '%"></div></div>';
     html += '</div></div>';
@@ -409,14 +409,54 @@ function mostrarFichaFidelidad(clienteId) {
     var gratis = cliente.masajesGratis || 0;
     var restantes = 10 - (puntos % 10);
     var tieneDerecho = restantes === 10 && puntos > 0;
-    var html = '<h4>' + cliente.nombre + '</h4><div class="info-fidelidad">';
+    var html = '<h4>' + cliente.nombre + '</h4>';
+    html += '<div class="info-fidelidad">';
     html += '<div class="stat"><div class="numero">' + puntos.toFixed(1) + '</div><div class="etiqueta">Puntos</div></div>';
     html += '<div class="stat"><div class="numero">' + gratis + '</div><div class="etiqueta">Gratis</div></div>';
     html += '<div class="stat"><div class="numero">' + (tieneDerecho ? 0 : restantes.toFixed(1)) + '</div><div class="etiqueta">Faltan</div></div></div>';
     html += '<div class="progress-bar" style="margin-top:15px;"><div class="fill ' + (tieneDerecho ? 'completo' : '') + '" style="width:' + (tieneDerecho ? 100 : (puntos % 10) * 10) + '%"></div></div>';
-    if (tieneDerecho) html += '<button class="btn-regalo" onclick="canjearMasajeGratis(\'' + clienteId + '\')" style="margin-top:15px;width:100%;padding:12px;"> Canjear</button>';
+    
+    // Sección para editar puntos manualmente
+    html += '<div style="margin-top:20px;padding:15px;background:#fef3c7;border-radius:8px;">';
+    html += '<h4 style="margin-top:0;color:#92400e;">✏️ Editar puntos manualmente</h4>';
+    html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">';
+    html += '<div style="flex:1;min-width:120px;"><label style="font-size:12px;color:#64748b;">Puntos acumulados:</label>';
+    html += '<input type="number" id="edit-puntos" value="' + puntos + '" step="0.5" min="0" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:16px;"></div>';
+    html += '<div style="flex:1;min-width:120px;"><label style="font-size:12px;color:#64748b;">Masajes gratis:</label>';
+    html += '<input type="number" id="edit-gratis" value="' + gratis + '" min="0" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:16px;"></div>';
+    html += '</div>';
+    html += '<button class="btn-regalo" onclick="guardarPuntosEditados(\'' + clienteId + '\')" style="width:100%;padding:12px;font-size:16px;">💾 Guardar cambios</button>';
+    html += '</div>';
+    
+    if (tieneDerecho) html += '<button class="btn-regalo" onclick="canjearMasajeGratis(\'' + clienteId + '\')" style="margin-top:15px;width:100%;padding:12px;"> Canjear masaje gratis</button>';
     document.getElementById('contenido-fidelidad').innerHTML = html;
     document.getElementById('ficha-fidelidad').style.display = 'block';
+}
+
+function guardarPuntosEditados(clienteId) {
+    var nuevosPuntos = parseFloat(document.getElementById('edit-puntos').value);
+    var nuevosGratis = parseInt(document.getElementById('edit-gratis').value);
+    
+    if (isNaN(nuevosPuntos) || nuevosPuntos < 0) {
+        alert(' Los puntos deben ser un número válido mayor o igual a 0');
+        return;
+    }
+    if (isNaN(nuevosGratis) || nuevosGratis < 0) {
+        alert('❌ Los masajes gratis deben ser un número válido mayor o igual a 0');
+        return;
+    }
+    
+    if (confirm('¿Guardar los nuevos valores?\n\nPuntos: ' + nuevosPuntos.toFixed(1) + '\nMasajes gratis: ' + nuevosGratis)) {
+        db.collection('clientes').doc(clienteId).update({
+            puntosFidelidad: nuevosPuntos,
+            masajesGratis: nuevosGratis
+        }).then(function() {
+            alert('✅ Puntos actualizados correctamente');
+            mostrarFichaFidelidad(clienteId);
+        }).catch(function(err) {
+            alert('❌ Error al guardar: ' + err.message);
+        });
+    }
 }
 
 function canjearMasajeGratis(clienteId) {
@@ -466,7 +506,7 @@ function guardarCita(e) {
 }
 
 function eliminarCliente(id) { if(confirm('¿Eliminar?')) { db.collection('clientes').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
-function eliminarCita(id) { if(confirm('¿Eliminar?')) { db.collection('citas').doc(id).delete(); mostrarEstado('️ Eliminado', 2000); } }
+function eliminarCita(id) { if(confirm('¿Eliminar?')) { db.collection('citas').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
 function eliminarCobro(id) { if(confirm('¿Eliminar?')) { db.collection('cobros').doc(id).delete(); mostrarEstado('️ Eliminado', 2000); } }
 
 function editarCliente(id) {
@@ -552,7 +592,7 @@ function actualizar() {
             var minCita = parseInt(partes[0]) * 60 + parseInt(partes[1]);
             var esNoShow = (minCita + TIEMPO_NOSHOW) <= ahoraMin;
             var estilo = esNoShow ? 'background:#fee2e2;border-left:4px solid #ef4444;color:#991b1b;' : 'background:#f9fafb;';
-            var etiqueta = esNoShow ? ' <span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold;"> NO SHOW</span>' : '';
+            var etiqueta = esNoShow ? ' <span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold;">❌ NO SHOW</span>' : '';
             hd += '<div style="padding:12px;margin:8px 0;border-radius:6px;' + estilo + '"><strong>' + c.cliente + '</strong> - ' + c.servicio + ' (' + c.hora + ')' + etiqueta + '</div>';
         });
     }
@@ -576,10 +616,10 @@ function actualizarTablaClientes() {
         var restantes = 10 - (puntos % 10);
         var tieneDerecho = restantes === 10 && puntos > 0;
         var badge = '';
-        if (tieneDerecho) badge = '<span class="badge-fidelidad listo">🎁 GRATIS</span>';
-        else if (restantes <= 3) badge = '<span class="badge-fidelidad cerca">' + restantes.toFixed(1) + ' pts</span>';
-        else badge = '<span class="badge-fidelidad normal">' + puntos.toFixed(1) + ' pts</span>';
-        html1 += '<tr><td><strong>' + c.nombre + '</strong>' + badge + '</td><td>' + c.telefono + '</td><td>' + (c.email || '-') + '</td><td style="text-align:center;"><strong>' + puntos.toFixed(1) + '</strong></td><td style="text-align:center;"><strong style="color:#f59e0b;">' + gratis + '</strong></td><td><button class="btn-editar" onclick="editarCliente(\'' + c.id + '\')">Editar</button><button class="btn-editar" onclick="mostrarFichaFidelidad(\'' + c.id + '\')" style="background:#f59e0b;">🎁</button><button class="btn-eliminar" onclick="eliminarCliente(\'' + c.id + '\')">Eliminar</button></td></tr>';
+        if (tieneDerecho) badge = '<span class="badge-fidelidad listo">F GRATIS</span>';
+        else if (restantes <= 3) badge = '<span class="badge-fidelidad cerca">F ' + restantes.toFixed(1) + ' pts</span>';
+        else badge = '<span class="badge-fidelidad normal">F ' + puntos.toFixed(1) + ' pts</span>';
+        html1 += '<tr><td><strong>' + c.nombre + '</strong>' + badge + '</td><td>' + c.telefono + '</td><td>' + (c.email || '-') + '</td><td style="text-align:center;"><strong>' + puntos.toFixed(1) + '</strong></td><td style="text-align:center;"><strong style="color:#f59e0b;">' + gratis + '</strong></td><td><button class="btn-editar" onclick="editarCliente(\'' + c.id + '\')">Editar</button><button class="btn-editar" onclick="mostrarFichaFidelidad(\'' + c.id + '\')" style="background:#f59e0b;">F</button><button class="btn-eliminar" onclick="eliminarCliente(\'' + c.id + '\')">Eliminar</button></td></tr>';
         sel += '<option>' + c.nombre + '</option>';
         selCobro += '<option>' + c.nombre + '</option>';
     });
@@ -845,7 +885,7 @@ th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
 th { background: #f0fdfa; color: #0f766e; }
 .editando { background: #fef3c7 !important; border: 2px solid #f59e0b; }
 .alerta-regalo { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 10px 0; border-radius: 8px; display: flex; align-items: center; gap: 15px; }
-.alerta-regalo .icono { font-size: 2rem; }
+.alerta-regalo .icono { font-size: 1.5rem; font-weight: bold; color: #f59e0b; background: white; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
 .alerta-regalo .texto { flex: 1; }
 .alerta-regalo .texto strong { color: #92400e; font-size: 1.1rem; }
 .estado-guardado { position: fixed; bottom: 20px; right: 20px; background: #059669; color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0; transition: opacity 0.3s; z-index: 1000; }
@@ -964,79 +1004,6 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 .resumen-valor { font-size: 2.5rem; font-weight: bold; }
 .resumen-valor-small { font-size: 1.2rem; font-weight: bold; }
 
-/* Banner de instalación PWA */
-.banner-instalacion {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
-    color: white;
-    padding: 20px;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
-    z-index: 3000;
-    display: none;
-    animation: slideUp 0.3s ease-out;
-}
-@keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-}
-.banner-instalacion .contenido-banner {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    flex-wrap: wrap;
-}
-.banner-instalacion .texto-banner {
-    flex: 1;
-    min-width: 200px;
-}
-.banner-instalacion .texto-banner h3 {
-    margin: 0 0 5px 0;
-    font-size: 18px;
-}
-.banner-instalacion .texto-banner p {
-    margin: 0;
-    font-size: 14px;
-    opacity: 0.9;
-}
-.banner-instalacion .botones-banner {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-.banner-instalacion .btn-instalar {
-    background: white;
-    color: #0d9488;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-.banner-instalacion .btn-instalar:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-.banner-instalacion .btn-cerrar-banner {
-    background: transparent;
-    color: white;
-    border: 2px solid white;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-.banner-instalacion .btn-cerrar-banner:hover {
-    background: rgba(255,255,255,0.2);
-}
-
 @media (max-width: 767px) {
     body { font-size: 17px !important; }
     .nav { padding: 8px !important; }
@@ -1053,14 +1020,6 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
     #btn-exportar, #btn-importar, #btn-reset { font-size: 12px !important; padding: 8px 12px !important; }
     .resumen-grid { grid-template-columns: repeat(2, 1fr) !important; }
     .resumen-valor { font-size: 2rem !important; }
-    .banner-instalacion .contenido-banner {
-        flex-direction: column;
-        text-align: center;
-    }
-    .banner-instalacion .botones-banner {
-        width: 100%;
-        justify-content: center;
-    }
 }
 @media (max-width: 479px) { 
     .header { padding: 5px; } 
@@ -1071,20 +1030,6 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </style>
 </head>
 <body>
-
-<!-- Banner de Instalación PWA -->
-<div id="banner-instalacion" class="banner-instalacion">
-    <div class="contenido-banner">
-        <div class="texto-banner">
-            <h3>📱 Instala Manos de Luz</h3>
-            <p>Instala la aplicación en tu dispositivo para acceder rápidamente y trabajar sin distracciones</p>
-        </div>
-        <div class="botones-banner">
-            <button class="btn-instalar" onclick="instalarApp()">📲 Instalar Ahora</button>
-            <button class="btn-cerrar-banner" onclick="cerrarBannerInstalacion()">✕ Más tarde</button>
-        </div>
-    </div>
-</div>
 
 <div class="header">
     <div class="header-izquierda">
@@ -1101,14 +1046,14 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </div>
 
 <div class="nav">
-<button id="b1" class="active"> Resumen</button>
+<button id="b1" class="active">📊 Resumen</button>
 <button id="b2">📅 Agenda</button>
 <button id="b3">👥 Clientes</button>
 <button id="b4">💰 Caja</button>
 <button id="b6">📜 Histórico</button>
 <button id="b7"> Tarifas</button>
-<button id="btn-exportar" style="float:right;background:#059669;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">💾 Copia</button>
-<button id="btn-importar" style="float:right;background:#8b5cf6;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">📥 Importar</button>
+<button id="btn-exportar" style="float:right;background:#059669;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;"> Copia</button>
+<button id="btn-importar" style="float:right;background:#8b5cf6;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;"> Importar</button>
 <button id="btn-reset" style="float:right;background:#ef4444;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">🗑️ Resetear</button>
 </div>
 <input type="file" id="input-importar" accept=".json" style="display:none;">
@@ -1152,19 +1097,19 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <input type="text" id="t1" readonly placeholder="👇 Selecciona una hora abajo" 
        style="cursor: pointer; background-color: #f0fdfa; text-align: center; font-weight: bold;" 
        onclick="abrirSelectorHoras()">
-<p class="hora-hint"> Haz clic en el campo de hora para ver las horas disponibles</p>
+<p class="hora-hint">💡 Haz clic en el campo de hora para ver las horas disponibles</p>
 <div id="visualizador-horarios" class="horario-visualizador" style="display:none;">
-    <h4> Horarios disponibles para <span id="fecha-seleccionada"></span></h4>
+    <h4>📅 Horarios disponibles para <span id="fecha-seleccionada"></span></h4>
     <div class="horario-grid" id="horario-grid"></div>
     <div class="horario-leyenda">
         <div class="horario-leyenda-item"><div class="horario-leyenda-color libre"></div><span>Disponible</span></div>
         <div class="horario-leyenda-item"><div class="horario-leyenda-color seleccionado"></div><span>Seleccionado</span></div>
-        <div class="horario-leyenda-item"><div class="horario-leyenda-color limpieza"></div><span>🧹 Limpieza</span></div>
-        <div class="horario-leyenda-item"><div class="horario-leyenda-color ocupado"></div><span> Ocupado</span></div>
+        <div class="horario-leyenda-item"><div class="horario-leyenda-color limpieza"></div><span> Limpieza</span></div>
+        <div class="horario-leyenda-item"><div class="horario-leyenda-color ocupado"></div><span>🔒 Ocupado</span></div>
     </div>
 </div>
 <div id="alerta-solapamiento" class="alerta-solapamiento">
-    <strong>⚠️ Conflicto de horario:</strong> <span id="mensaje-solapamiento"></span>
+    <strong>️ Conflicto de horario:</strong> <span id="mensaje-solapamiento"></span>
 </div>
 <select id="c1" required onchange="onClienteChange()" disabled><option value="">Primero selecciona fecha y hora...</option></select>
 <div id="aviso-fidelidad" style="display:none;"></div>
@@ -1222,7 +1167,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div id="s3" class="section">
 <h2>Clientes</h2>
 <div class="busqueda-container">
-    <label> Buscar:</label>
+    <label>🔍 Buscar:</label>
     <input type="text" id="busqueda-clientes" placeholder="Escribe nombre, apellido o teléfono..." oninput="filtrarClientes()">
     <span class="contador-resultados" id="contador-resultados"></span>
 </div>
@@ -1276,7 +1221,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </form>
 </div>
 <div class="card">
-<h3> Gráficos de Ingresos</h3>
+<h3>📈 Gráficos de Ingresos</h3>
 <div class="filtros-grafico">
 <label><strong>Período:</strong></label>
 <select id="grafico-periodo" onchange="cambiarGrafico()">
@@ -1421,7 +1366,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
             <div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)"><span class="icono">💵</span><span class="nombre">Efectivo</span></div>
             <div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)"><span class="icono">💳</span><span class="nombre">Tarjeta</span></div>
             <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)"><span class="icono">📱</span><span class="nombre">Bizum</span></div>
-            <div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"><span class="icono">🏦</span><span class="nombre">Transferencia</span></div>
+            <div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"><span class="icono"></span><span class="nombre">Transferencia</span></div>
         </div>
         <div class="modal-botones">
             <button class="btn-cancelar" onclick="cerrarModalCobro()">Cancelar</button>
