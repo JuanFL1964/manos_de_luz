@@ -34,6 +34,7 @@ var cobroPendiente = null;
 var metodoSeleccionado = null;
 var graficoIngresos = null;
 var graficoMetodos = null;
+var deferredPrompt = null;
 
 var tarifasPorDefecto = {
     'relajante_60': 50, 'relajante_90': 75, 'relajante_120': 100,
@@ -103,6 +104,44 @@ function cambiar(n) {
     if(n === 6) actualizarHistorico();
 }
 
+// ===== INSTALACIÓN PWA =====
+function mostrarBannerInstalacion() {
+    var primeraVez = localStorage.getItem('primeraVisita');
+    if (!primeraVez && deferredPrompt) {
+        document.getElementById('banner-instalacion').style.display = 'block';
+        localStorage.setItem('primeraVisita', 'true');
+    }
+}
+
+function instalarApp() {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function(choiceResult) {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('Usuario aceptó instalar la app');
+            }
+            deferredPrompt = null;
+            document.getElementById('banner-instalacion').style.display = 'none';
+        });
+    }
+}
+
+function cerrarBannerInstalacion() {
+    document.getElementById('banner-instalacion').style.display = 'none';
+}
+
+window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    mostrarBannerInstalacion();
+});
+
+window.addEventListener('appinstalled', function() {
+    console.log('PWA instalada correctamente');
+    deferredPrompt = null;
+    document.getElementById('banner-instalacion').style.display = 'none';
+});
+
 // ===== RESET BASE DE DATOS =====
 function resetearBaseDatos() {
     var codigo = prompt('⚠️ ATENCIÓN: Esta acción borrará TODOS los datos.\n\nPara confirmar, escribe: RESET\n\n(Se borrarán: clientes, citas y cobros.\nLas tarifas se mantendrán.)');
@@ -140,7 +179,7 @@ function exportarDatos() {
         document.body.appendChild(a);
         a.click();
         setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
-        mostrarEstado(' Copia descargada', 3000);
+        mostrarEstado('💾 Copia descargada', 3000);
     } catch(err) { alert('Error: ' + err.message); }
 }
 
@@ -197,7 +236,7 @@ function mostrarVisualizadorHorarios(fecha) {
             slot.textContent = timeStr;
             slot.dataset.hora = timeStr;
             var estado = verificarEstadoHorario(fecha, timeStr, null);
-            if (estado === 'ocupado') { slot.classList.add('ocupado'); slot.title = ' Ocupado'; }
+            if (estado === 'ocupado') { slot.classList.add('ocupado'); slot.title = '🔒 Ocupado'; }
             else if (estado === 'limpieza') { slot.classList.add('limpieza'); slot.title = '🧹 Limpieza'; }
             else { slot.classList.add('libre'); slot.title = '✅ Disponible'; slot.onclick = function() { seleccionarHoraDesdeVisualizador(this.dataset.hora); }; }
             if (timeStr === horaActual) slot.classList.add('seleccionado');
@@ -247,7 +286,6 @@ function seleccionarHoraDesdeVisualizador(hora) {
     if (estado !== 'libre') return;
     document.getElementById('t1').value = hora;
     document.querySelectorAll('.horario-slot').forEach(function(slot) { slot.classList.remove('seleccionado'); if (slot.dataset.hora === hora) slot.classList.add('seleccionado'); });
-    // OCULTAR EL PANEL AUTOMÁTICAMENTE
     document.getElementById('visualizador-horarios').style.display = 'none';
     document.getElementById('visualizador-horarios').classList.remove('activo');
     onFechaHoraChange();
@@ -376,7 +414,7 @@ function mostrarFichaFidelidad(clienteId) {
     html += '<div class="stat"><div class="numero">' + gratis + '</div><div class="etiqueta">Gratis</div></div>';
     html += '<div class="stat"><div class="numero">' + (tieneDerecho ? 0 : restantes.toFixed(1)) + '</div><div class="etiqueta">Faltan</div></div></div>';
     html += '<div class="progress-bar" style="margin-top:15px;"><div class="fill ' + (tieneDerecho ? 'completo' : '') + '" style="width:' + (tieneDerecho ? 100 : (puntos % 10) * 10) + '%"></div></div>';
-    if (tieneDerecho) html += '<button class="btn-regalo" onclick="canjearMasajeGratis(\'' + clienteId + '\')" style="margin-top:15px;width:100%;padding:12px;">🎁 Canjear</button>';
+    if (tieneDerecho) html += '<button class="btn-regalo" onclick="canjearMasajeGratis(\'' + clienteId + '\')" style="margin-top:15px;width:100%;padding:12px;"> Canjear</button>';
     document.getElementById('contenido-fidelidad').innerHTML = html;
     document.getElementById('ficha-fidelidad').style.display = 'block';
 }
@@ -428,8 +466,8 @@ function guardarCita(e) {
 }
 
 function eliminarCliente(id) { if(confirm('¿Eliminar?')) { db.collection('clientes').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
-function eliminarCita(id) { if(confirm('¿Eliminar?')) { db.collection('citas').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
-function eliminarCobro(id) { if(confirm('¿Eliminar?')) { db.collection('cobros').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
+function eliminarCita(id) { if(confirm('¿Eliminar?')) { db.collection('citas').doc(id).delete(); mostrarEstado('️ Eliminado', 2000); } }
+function eliminarCobro(id) { if(confirm('¿Eliminar?')) { db.collection('cobros').doc(id).delete(); mostrarEstado('️ Eliminado', 2000); } }
 
 function editarCliente(id) {
     var c = clientes.find(function(x) { return x.id === id; });
@@ -514,7 +552,7 @@ function actualizar() {
             var minCita = parseInt(partes[0]) * 60 + parseInt(partes[1]);
             var esNoShow = (minCita + TIEMPO_NOSHOW) <= ahoraMin;
             var estilo = esNoShow ? 'background:#fee2e2;border-left:4px solid #ef4444;color:#991b1b;' : 'background:#f9fafb;';
-            var etiqueta = esNoShow ? ' <span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold;">❌ NO SHOW</span>' : '';
+            var etiqueta = esNoShow ? ' <span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold;"> NO SHOW</span>' : '';
             hd += '<div style="padding:12px;margin:8px 0;border-radius:6px;' + estilo + '"><strong>' + c.cliente + '</strong> - ' + c.servicio + ' (' + c.hora + ')' + etiqueta + '</div>';
         });
     }
@@ -538,10 +576,10 @@ function actualizarTablaClientes() {
         var restantes = 10 - (puntos % 10);
         var tieneDerecho = restantes === 10 && puntos > 0;
         var badge = '';
-        if (tieneDerecho) badge = '<span class="badge-fidelidad listo"> GRATIS</span>';
+        if (tieneDerecho) badge = '<span class="badge-fidelidad listo">🎁 GRATIS</span>';
         else if (restantes <= 3) badge = '<span class="badge-fidelidad cerca">' + restantes.toFixed(1) + ' pts</span>';
         else badge = '<span class="badge-fidelidad normal">' + puntos.toFixed(1) + ' pts</span>';
-        html1 += '<tr><td><strong>' + c.nombre + '</strong>' + badge + '</td><td>' + c.telefono + '</td><td>' + (c.email || '-') + '</td><td style="text-align:center;"><strong>' + puntos.toFixed(1) + '</strong></td><td style="text-align:center;"><strong style="color:#f59e0b;">' + gratis + '</strong></td><td><button class="btn-editar" onclick="editarCliente(\'' + c.id + '\')">Editar</button><button class="btn-editar" onclick="mostrarFichaFidelidad(\'' + c.id + '\')" style="background:#f59e0b;"></button><button class="btn-eliminar" onclick="eliminarCliente(\'' + c.id + '\')">Eliminar</button></td></tr>';
+        html1 += '<tr><td><strong>' + c.nombre + '</strong>' + badge + '</td><td>' + c.telefono + '</td><td>' + (c.email || '-') + '</td><td style="text-align:center;"><strong>' + puntos.toFixed(1) + '</strong></td><td style="text-align:center;"><strong style="color:#f59e0b;">' + gratis + '</strong></td><td><button class="btn-editar" onclick="editarCliente(\'' + c.id + '\')">Editar</button><button class="btn-editar" onclick="mostrarFichaFidelidad(\'' + c.id + '\')" style="background:#f59e0b;">🎁</button><button class="btn-eliminar" onclick="eliminarCliente(\'' + c.id + '\')">Eliminar</button></td></tr>';
         sel += '<option>' + c.nombre + '</option>';
         selCobro += '<option>' + c.nombre + '</option>';
     });
@@ -926,6 +964,79 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 .resumen-valor { font-size: 2.5rem; font-weight: bold; }
 .resumen-valor-small { font-size: 1.2rem; font-weight: bold; }
 
+/* Banner de instalación PWA */
+.banner-instalacion {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+    color: white;
+    padding: 20px;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
+    z-index: 3000;
+    display: none;
+    animation: slideUp 0.3s ease-out;
+}
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+.banner-instalacion .contenido-banner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.banner-instalacion .texto-banner {
+    flex: 1;
+    min-width: 200px;
+}
+.banner-instalacion .texto-banner h3 {
+    margin: 0 0 5px 0;
+    font-size: 18px;
+}
+.banner-instalacion .texto-banner p {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
+.banner-instalacion .botones-banner {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+.banner-instalacion .btn-instalar {
+    background: white;
+    color: #0d9488;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.banner-instalacion .btn-instalar:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.banner-instalacion .btn-cerrar-banner {
+    background: transparent;
+    color: white;
+    border: 2px solid white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.banner-instalacion .btn-cerrar-banner:hover {
+    background: rgba(255,255,255,0.2);
+}
+
 @media (max-width: 767px) {
     body { font-size: 17px !important; }
     .nav { padding: 8px !important; }
@@ -942,6 +1053,14 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
     #btn-exportar, #btn-importar, #btn-reset { font-size: 12px !important; padding: 8px 12px !important; }
     .resumen-grid { grid-template-columns: repeat(2, 1fr) !important; }
     .resumen-valor { font-size: 2rem !important; }
+    .banner-instalacion .contenido-banner {
+        flex-direction: column;
+        text-align: center;
+    }
+    .banner-instalacion .botones-banner {
+        width: 100%;
+        justify-content: center;
+    }
 }
 @media (max-width: 479px) { 
     .header { padding: 5px; } 
@@ -952,6 +1071,20 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </style>
 </head>
 <body>
+
+<!-- Banner de Instalación PWA -->
+<div id="banner-instalacion" class="banner-instalacion">
+    <div class="contenido-banner">
+        <div class="texto-banner">
+            <h3>📱 Instala Manos de Luz</h3>
+            <p>Instala la aplicación en tu dispositivo para acceder rápidamente y trabajar sin distracciones</p>
+        </div>
+        <div class="botones-banner">
+            <button class="btn-instalar" onclick="instalarApp()">📲 Instalar Ahora</button>
+            <button class="btn-cerrar-banner" onclick="cerrarBannerInstalacion()">✕ Más tarde</button>
+        </div>
+    </div>
+</div>
 
 <div class="header">
     <div class="header-izquierda">
@@ -968,12 +1101,12 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </div>
 
 <div class="nav">
-<button id="b1" class="active">📊 Resumen</button>
+<button id="b1" class="active"> Resumen</button>
 <button id="b2">📅 Agenda</button>
 <button id="b3">👥 Clientes</button>
 <button id="b4">💰 Caja</button>
 <button id="b6">📜 Histórico</button>
-<button id="b7">💵 Tarifas</button>
+<button id="b7"> Tarifas</button>
 <button id="btn-exportar" style="float:right;background:#059669;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">💾 Copia</button>
 <button id="btn-importar" style="float:right;background:#8b5cf6;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">📥 Importar</button>
 <button id="btn-reset" style="float:right;background:#ef4444;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">🗑️ Resetear</button>
@@ -1019,15 +1152,15 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <input type="text" id="t1" readonly placeholder="👇 Selecciona una hora abajo" 
        style="cursor: pointer; background-color: #f0fdfa; text-align: center; font-weight: bold;" 
        onclick="abrirSelectorHoras()">
-<p class="hora-hint">💡 Haz clic en el campo de hora para ver las horas disponibles</p>
+<p class="hora-hint"> Haz clic en el campo de hora para ver las horas disponibles</p>
 <div id="visualizador-horarios" class="horario-visualizador" style="display:none;">
-    <h4>📅 Horarios disponibles para <span id="fecha-seleccionada"></span></h4>
+    <h4> Horarios disponibles para <span id="fecha-seleccionada"></span></h4>
     <div class="horario-grid" id="horario-grid"></div>
     <div class="horario-leyenda">
         <div class="horario-leyenda-item"><div class="horario-leyenda-color libre"></div><span>Disponible</span></div>
         <div class="horario-leyenda-item"><div class="horario-leyenda-color seleccionado"></div><span>Seleccionado</span></div>
         <div class="horario-leyenda-item"><div class="horario-leyenda-color limpieza"></div><span>🧹 Limpieza</span></div>
-        <div class="horario-leyenda-item"><div class="horario-leyenda-color ocupado"></div><span>🔒 Ocupado</span></div>
+        <div class="horario-leyenda-item"><div class="horario-leyenda-color ocupado"></div><span> Ocupado</span></div>
     </div>
 </div>
 <div id="alerta-solapamiento" class="alerta-solapamiento">
@@ -1089,7 +1222,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div id="s3" class="section">
 <h2>Clientes</h2>
 <div class="busqueda-container">
-    <label>🔍 Buscar:</label>
+    <label> Buscar:</label>
     <input type="text" id="busqueda-clientes" placeholder="Escribe nombre, apellido o teléfono..." oninput="filtrarClientes()">
     <span class="contador-resultados" id="contador-resultados"></span>
 </div>
@@ -1143,7 +1276,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </form>
 </div>
 <div class="card">
-<h3>📈 Gráficos de Ingresos</h3>
+<h3> Gráficos de Ingresos</h3>
 <div class="filtros-grafico">
 <label><strong>Período:</strong></label>
 <select id="grafico-periodo" onchange="cambiarGrafico()">
@@ -1165,7 +1298,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div class="grafico-container"><canvas id="graficoMetodos"></canvas></div>
 </div>
 <div class="card">
-<h3> Listado de Masajes Realizados</h3>
+<h3>📋 Listado de Masajes Realizados</h3>
 <div class="busqueda-rapida">
     <input type="text" id="busqueda-masajes" placeholder="🔍 Buscar en el listado..." oninput="actualizarListadoMasajes()">
 </div>
