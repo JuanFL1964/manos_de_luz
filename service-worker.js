@@ -1,4 +1,4 @@
-const CACHE_NAME = 'manos-de-luz-v8';
+const CACHE_NAME = 'manos-de-luz-v9';
 const urlsToCache = [
   './',
   './index.html'
