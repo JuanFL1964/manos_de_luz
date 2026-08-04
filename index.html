@@ -464,22 +464,38 @@ function ocultarEditorFidelidad() {
 }
 
 function guardarPuntosEditados(clienteId) {
-    var nuevosPuntos = parseFloat(document.getElementById('edit-puntos').value);
+    console.log('Guardando puntos para cliente:', clienteId);
+    
+    var inputPuntos = document.getElementById('edit-puntos');
+    if (!inputPuntos) {
+        alert('❌ Error: No se encuentra el campo de puntos');
+        console.error('No se encontró el elemento edit-puntos');
+        return;
+    }
+    
+    var nuevosPuntos = parseFloat(inputPuntos.value);
+    console.log('Nuevos puntos:', nuevosPuntos);
+    
     if (isNaN(nuevosPuntos) || nuevosPuntos < 0) {
         alert('❌ Los puntos deben ser un número válido mayor o igual a 0');
         return;
     }
+    
     var mensaje = '¿Guardar los nuevos valores?\n\nPuntos: ' + nuevosPuntos.toFixed(1);
     if (nuevosPuntos >= 10) {
         mensaje += '\n\n⚠️ El cliente tendrá 1 MASAJE GRATIS disponible';
     }
+    
     if (confirm(mensaje)) {
+        console.log('Actualizando Firebase...');
         db.collection('clientes').doc(clienteId).update({
             puntosFidelidad: nuevosPuntos
         }).then(function() {
+            console.log('✅ Actualizado correctamente');
             alert('✅ Puntos actualizados correctamente');
             mostrarFichaFidelidad(clienteId);
         }).catch(function(err) {
+            console.error('❌ Error:', err);
             alert('❌ Error al guardar: ' + err.message);
         });
     }
