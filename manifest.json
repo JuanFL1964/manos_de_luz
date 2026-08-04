@@ -1,7 +1,7 @@
 {
   "name": "Manos de Luz - Gestión",
   "short_name": "Manos de Luz",
-  "description": "Sistema de gestión para Quiromasaje Tarragona",
+  "description": "Sistema de gestión para Manos de Luz Quiromasaje",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f0fdfa",
@@ -11,14 +11,12 @@
     {
       "src": "https://i.imgur.com/0PowleW.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
       "src": "https://i.imgur.com/0PowleW.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }
