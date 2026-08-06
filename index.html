@@ -892,6 +892,12 @@ function actualizarGraficos() {
 
 function mostrarEstado(mensaje, duracion) { var el = document.getElementById('estado'); el.textContent = mensaje; el.classList.add('visible'); setTimeout(function() { el.classList.remove('visible'); }, duracion); }
 
+// Prevenir botón atrás del navegador
+window.addEventListener('popstate', function(event) {
+    history.pushState(null, null, window.location.href);
+});
+history.pushState(null, null, window.location.href);
+  
 window.onload = function() {
     actualizarReloj();
     setInterval(actualizarReloj, 1000);
