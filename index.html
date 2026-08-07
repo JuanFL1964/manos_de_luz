@@ -36,6 +36,8 @@ var graficoIngresos = null;
 var graficoMetodos = null;
 var deferredPrompt = null;
 
+var MASAJISTAS = ['Luz', 'Laura'];
+
 var tarifasPorDefecto = {
     'relajante_60': 50, 'relajante_90': 75, 'relajante_120': 100,
     'terapeutico_60': 50, 'terapeutico_90': 75, 'terapeutico_120': 100,
@@ -112,32 +114,25 @@ function mostrarBannerInstalacion() {
         localStorage.setItem('primeraVisita', 'true');
     }
 }
-
 function instalarApp() {
     if (deferredPrompt) {
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then(function(choiceResult) {
-            if (choiceResult.outcome === 'accepted') {
-                console.log('Usuario aceptó instalar la app');
-            }
+            if (choiceResult.outcome === 'accepted') console.log('Usuario aceptó instalar la app');
             deferredPrompt = null;
             document.getElementById('banner-instalacion').style.display = 'none';
         });
     }
 }
-
 function cerrarBannerInstalacion() {
     document.getElementById('banner-instalacion').style.display = 'none';
 }
-
 window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     deferredPrompt = e;
     mostrarBannerInstalacion();
 });
-
 window.addEventListener('appinstalled', function() {
-    console.log('PWA instalada correctamente');
     deferredPrompt = null;
     document.getElementById('banner-instalacion').style.display = 'none';
 });
@@ -150,7 +145,7 @@ history.pushState(null, null, window.location.href);
 
 // ===== RESET BASE DE DATOS =====
 function resetearBaseDatos() {
-    var codigo = prompt('️ ATENCIÓN: Esta acción borrará TODOS los datos.\n\nPara confirmar, escribe: RESET\n\n(Se borrarán: clientes, citas y cobros.\nLas tarifas se mantendrán.)');
+    var codigo = prompt('⚠️ ATENCIÓN: Esta acción borrará TODOS los datos.\n\nPara confirmar, escribe: RESET\n\n(Se borrarán: clientes, citas y cobros.\nLas tarifas se mantendrán.)');
     if (codigo !== 'RESET') {
         if (codigo !== null) alert('❌ Código incorrecto. No se ha borrado nada.');
         return;
@@ -219,18 +214,21 @@ function importarDatos(file) {
     reader.readAsText(file, 'UTF-8');
 }
 
+// ===== HORARIOS POR MASAJISTA =====
 function abrirSelectorHoras() {
     var fecha = document.getElementById('d1').value;
+    var masajista = document.getElementById('masajista').value;
     if (!fecha) { alert('Selecciona fecha primero'); return; }
+    if (!masajista) { alert('Selecciona masajista primero'); return; }
     var visualizador = document.getElementById('visualizador-horarios');
     visualizador.style.display = 'block';
     visualizador.classList.add('activo');
-    mostrarVisualizadorHorarios(fecha);
+    mostrarVisualizadorHorarios(fecha, masajista);
     visualizador.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function mostrarVisualizadorHorarios(fecha) {
-    document.getElementById('fecha-seleccionada').textContent = fecha;
+function mostrarVisualizadorHorarios(fecha, masajista) {
+    document.getElementById('fecha-seleccionada').textContent = fecha + ' - ' + masajista;
     var grid = document.getElementById('horario-grid');
     grid.innerHTML = '';
     var horaActual = document.getElementById('t1').value;
@@ -241,9 +239,9 @@ function mostrarVisualizadorHorarios(fecha) {
             slot.className = 'horario-slot';
             slot.textContent = timeStr;
             slot.dataset.hora = timeStr;
-            var estado = verificarEstadoHorario(fecha, timeStr, null);
-            if (estado === 'ocupado') { slot.classList.add('ocupado'); slot.title = ' Ocupado'; }
-            else if (estado === 'limpieza') { slot.classList.add('limpieza'); slot.title = ' Limpieza'; }
+            var estado = verificarEstadoHorario(fecha, timeStr, masajista, null);
+            if (estado === 'ocupado') { slot.classList.add('ocupado'); slot.title = '🔒 Ocupado'; }
+            else if (estado === 'limpieza') { slot.classList.add('limpieza'); slot.title = '🧹 Limpieza'; }
             else { slot.classList.add('libre'); slot.title = '✅ Disponible'; slot.onclick = function() { seleccionarHoraDesdeVisualizador(this.dataset.hora); }; }
             if (timeStr === horaActual) slot.classList.add('seleccionado');
             grid.appendChild(slot);
@@ -251,11 +249,12 @@ function mostrarVisualizadorHorarios(fecha) {
     }
 }
 
-function verificarEstadoHorario(fecha, horaInicio, citaIdExcluir) {
-    if (!fecha || !horaInicio) return 'libre';
+function verificarEstadoHorario(fecha, horaInicio, masajista, citaIdExcluir) {
+    if (!fecha || !horaInicio || !masajista) return 'libre';
     var partes = horaInicio.split(':');
     var minInicio = parseInt(partes[0]) * 60 + parseInt(partes[1]);
-    var citasDia = citas.filter(function(c) { return c.fecha === fecha && c.id !== citaIdExcluir; });
+    // Solo citas del MISMO masajista
+    var citasDia = citas.filter(function(c) { return c.fecha === fecha && c.masajista === masajista && c.id !== citaIdExcluir; });
     for (var i = 0; i < citasDia.length; i++) {
         var partesCita = citasDia[i].hora.split(':');
         var citaInicio = parseInt(partesCita[0]) * 60 + parseInt(partesCita[1]);
@@ -268,12 +267,13 @@ function verificarEstadoHorario(fecha, horaInicio, citaIdExcluir) {
     return 'libre';
 }
 
-function verificarSolapamiento(fecha, horaInicio, duracionMin, citaIdExcluir) {
-    if (!fecha || !horaInicio) return false;
+function verificarSolapamiento(fecha, horaInicio, duracionMin, masajista, citaIdExcluir) {
+    if (!fecha || !horaInicio || !masajista) return false;
     var partes = horaInicio.split(':');
     var minInicio = parseInt(partes[0]) * 60 + parseInt(partes[1]);
     var minFin = minInicio + (duracionMin || 0);
-    var citasDia = citas.filter(function(c) { return c.fecha === fecha && c.id !== citaIdExcluir; });
+    // Solo citas del MISMO masajista
+    var citasDia = citas.filter(function(c) { return c.fecha === fecha && c.masajista === masajista && c.id !== citaIdExcluir; });
     for (var i = 0; i < citasDia.length; i++) {
         var partesCita = citasDia[i].hora.split(':');
         var citaInicio = parseInt(partesCita[0]) * 60 + parseInt(partesCita[1]);
@@ -288,7 +288,8 @@ function verificarSolapamiento(fecha, horaInicio, duracionMin, citaIdExcluir) {
 
 function seleccionarHoraDesdeVisualizador(hora) {
     var fecha = document.getElementById('d1').value;
-    var estado = verificarEstadoHorario(fecha, hora, null);
+    var masajista = document.getElementById('masajista').value;
+    var estado = verificarEstadoHorario(fecha, hora, masajista, null);
     if (estado !== 'libre') return;
     document.getElementById('t1').value = hora;
     document.querySelectorAll('.horario-slot').forEach(function(slot) { slot.classList.remove('seleccionado'); if (slot.dataset.hora === hora) slot.classList.add('seleccionado'); });
@@ -299,13 +300,14 @@ function seleccionarHoraDesdeVisualizador(hora) {
 
 function onFechaHoraChange() {
     var fecha = document.getElementById('d1').value;
+    var masajista = document.getElementById('masajista').value;
     var hora = document.getElementById('t1').value;
     var selectCliente = document.getElementById('c1');
-    if (fecha) mostrarVisualizadorHorarios(fecha);
+    if (fecha && masajista) mostrarVisualizadorHorarios(fecha, masajista);
     else document.getElementById('visualizador-horarios').style.display = 'none';
-    if (fecha && hora) {
-        if (verificarSolapamiento(fecha, hora, null)) {
-            document.getElementById('mensaje-solapamiento').textContent = 'Ya existe una cita';
+    if (fecha && masajista && hora) {
+        if (verificarSolapamiento(fecha, hora, null, masajista, null)) {
+            document.getElementById('mensaje-solapamiento').textContent = 'Ya existe una cita para ' + masajista + ' a esa hora';
             document.getElementById('alerta-solapamiento').classList.add('visible');
             selectCliente.disabled = true;
             return;
@@ -325,6 +327,12 @@ function onFechaHoraChange() {
         resetearDesdeDuracion();
         document.getElementById('aviso-fidelidad').style.display = 'none';
     }
+}
+
+function onMasajistaChange() {
+    // Al cambiar masajista, limpiar hora y actualizar visualizador
+    document.getElementById('t1').value = '';
+    onFechaHoraChange();
 }
 
 function onClienteChange() {
@@ -420,15 +428,12 @@ function mostrarFichaFidelidad(clienteId) {
     var tieneDerecho = puntos >= 10;
     
     var html = '<h4>' + cliente.nombre + ' <button class="btn-editar" onclick="mostrarEditorFidelidad(\'' + clienteId + '\')" style="background:#f59e0b;font-size:13px;margin-left:10px;">✏️ Editar Fidelización</button></h4>';
-    
     html += '<div class="info-fidelidad">';
     html += '<div class="stat"><div class="numero">' + puntos.toFixed(1) + '</div><div class="etiqueta">Puntos actuales</div></div>';
     html += '<div class="stat"><div class="numero">' + (tieneDerecho ? 0 : restantes.toFixed(1)) + '</div><div class="etiqueta">Faltan para gratis</div></div>';
     html += '<div class="stat"><div class="numero" style="color:' + (tieneDerecho ? '#f59e0b' : '#0d9488') + ';">' + (tieneDerecho ? 'SÍ' : 'NO') + '</div><div class="etiqueta">Masaje gratis disponible</div></div>';
     html += '</div>';
-    
     html += '<div class="progress-bar" style="margin-top:15px;"><div class="fill ' + (tieneDerecho ? 'completo' : '') + '" style="width:' + (tieneDerecho ? 100 : (puntos % 10) * 10) + '%"></div></div>';
-    
     if (tieneDerecho) {
         html += '<div style="margin-top:15px;padding:15px;background:#fef3c7;border-radius:8px;text-align:center;">';
         html += '<strong style="color:#92400e;font-size:1.1rem;">🎉 ¡TIENE 1 MASAJE GRATIS DISPONIBLE!</strong>';
@@ -439,7 +444,6 @@ function mostrarFichaFidelidad(clienteId) {
         html += '<strong style="color:#0d9488;font-size:1rem;">Le faltan ' + restantes.toFixed(1) + ' puntos para el siguiente masaje gratis</strong>';
         html += '</div>';
     }
-    
     html += '<div id="editor-fidelidad" style="display:none;margin-top:20px;padding:15px;background:#fef3c7;border-radius:8px;">';
     html += '<h4 style="margin-top:0;color:#92400e;">✏️ Editar puntos (solo para migración)</h4>';
     html += '<p style="font-size:13px;color:#64748b;margin-bottom:10px;">Si el cliente ya tiene un masaje gratis pendiente, pon 10 puntos. El sistema lo detectará automáticamente.</p>';
@@ -447,10 +451,9 @@ function mostrarFichaFidelidad(clienteId) {
     html += '<label style="font-size:12px;color:#64748b;display:block;margin-bottom:5px;">Puntos acumulados:</label>';
     html += '<input type="number" id="edit-puntos" value="' + puntos + '" step="0.5" min="0" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:16px;">';
     html += '</div>';
-    html += '<button class="btn-regalo" onclick="guardarPuntosEditados(\'' + clienteId + '\')" style="width:100%;padding:12px;font-size:16px;"> Guardar cambios</button>';
+    html += '<button class="btn-regalo" onclick="guardarPuntosEditados(\'' + clienteId + '\')" style="width:100%;padding:12px;font-size:16px;">💾 Guardar cambios</button>';
     html += '<button onclick="ocultarEditorFidelidad()" style="width:100%;padding:10px;margin-top:8px;background:#6b7280;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">✕ Cancelar</button>';
     html += '</div>';
-    
     document.getElementById('contenido-fidelidad').innerHTML = html;
     document.getElementById('ficha-fidelidad').style.display = 'block';
 }
@@ -462,37 +465,22 @@ function mostrarEditorFidelidad(clienteId) {
         editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 }
-
 function ocultarEditorFidelidad() {
     var editor = document.getElementById('editor-fidelidad');
     if (editor) editor.style.display = 'none';
 }
-
 function guardarPuntosEditados(clienteId) {
-    console.log('Guardando puntos para cliente:', clienteId);
     var inputPuntos = document.getElementById('edit-puntos');
-    if (!inputPuntos) {
-        alert('❌ Error: No se encuentra el campo de puntos');
-        return;
-    }
+    if (!inputPuntos) { alert('❌ Error: No se encuentra el campo de puntos'); return; }
     var nuevosPuntos = parseFloat(inputPuntos.value);
-    if (isNaN(nuevosPuntos) || nuevosPuntos < 0) {
-        alert('❌ Los puntos deben ser un número válido mayor o igual a 0');
-        return;
-    }
+    if (isNaN(nuevosPuntos) || nuevosPuntos < 0) { alert('❌ Los puntos deben ser un número válido mayor o igual a 0'); return; }
     var mensaje = '¿Guardar los nuevos valores?\n\nPuntos: ' + nuevosPuntos.toFixed(1);
-    if (nuevosPuntos >= 10) {
-        mensaje += '\n\n⚠️ El cliente tendrá 1 MASAJE GRATIS disponible';
-    }
+    if (nuevosPuntos >= 10) mensaje += '\n\n⚠️ El cliente tendrá 1 MASAJE GRATIS disponible';
     if (confirm(mensaje)) {
-        db.collection('clientes').doc(clienteId).update({
-            puntosFidelidad: nuevosPuntos
-        }).then(function() {
+        db.collection('clientes').doc(clienteId).update({ puntosFidelidad: nuevosPuntos }).then(function() {
             alert('✅ Puntos actualizados correctamente');
             mostrarFichaFidelidad(clienteId);
-        }).catch(function(err) {
-            alert('❌ Error al guardar: ' + err.message);
-        });
+        }).catch(function(err) { alert('❌ Error al guardar: ' + err.message); });
     }
 }
 
@@ -517,19 +505,22 @@ function guardarCita(e) {
     e.preventDefault();
     var fecha = document.getElementById('d1').value;
     var hora = document.getElementById('t1').value;
+    var masajista = document.getElementById('masajista').value;
     var duracion = document.querySelector('input[name="duracion"]:checked').value;
     var esGratis = document.getElementById('esGratis').checked;
     var clienteNombre = document.getElementById('c1').value;
     var puntos = getPuntosPorDuracion(duracion);
     
-    if (verificarSolapamiento(fecha, hora, parseInt(duracion), editandoCita)) { 
-        alert('❌ Ya existe una cita'); 
+    if (!masajista) { alert('❌ Selecciona una masajista'); return; }
+    if (verificarSolapamiento(fecha, hora, parseInt(duracion), masajista, editandoCita)) { 
+        alert('❌ Ya existe una cita para ' + masajista + ' a esa hora'); 
         return; 
     }
     
     var datos = { 
         fecha: fecha, 
         hora: hora, 
+        masajista: masajista,
         cliente: clienteNombre, 
         servicio: document.getElementById('sv1').value, 
         duracion: duracion, 
@@ -545,7 +536,6 @@ function guardarCita(e) {
         mostrarEstado('✅ Cita actualizada', 2000);
     } else {
         db.collection('citas').add(datos);
-        
         if (clienteNombre) {
             var cliente = clientes.find(function(c) { return c.nombre === clienteNombre; });
             if (cliente) {
@@ -556,9 +546,7 @@ function guardarCita(e) {
                     var nuevosPuntos = (cliente.puntosFidelidad || 0) + puntos;
                     db.collection('clientes').doc(cliente.id).update({puntosFidelidad: nuevosPuntos});
                     if (nuevosPuntos >= 10 && (nuevosPuntos - puntos) < 10) {
-                        setTimeout(function() { 
-                            alert('🎉 ¡' + cliente.nombre + ' ha alcanzado los 10 puntos!\n\nTIENE 1 MASAJE GRATIS DISPONIBLE'); 
-                        }, 500);
+                        setTimeout(function() { alert(' ¡' + cliente.nombre + ' ha alcanzado los 10 puntos!\n\nTIENE 1 MASAJE GRATIS DISPONIBLE'); }, 500);
                     }
                     mostrarEstado('✅ Cita guardada - +' + puntos + ' puntos', 2000);
                 }
@@ -593,6 +581,7 @@ function editarCita(id) {
     if (!c) return;
     editandoCita = id;
     document.getElementById('d1').value = c.fecha;
+    document.getElementById('masajista').value = c.masajista || 'Luz';
     document.getElementById('t1').value = c.hora;
     document.getElementById('c1').value = c.cliente;
     document.getElementById('sv1').value = c.servicio;
@@ -615,7 +604,7 @@ function editarCita(id) {
     document.getElementById('btn-cancelar-cita').style.display = 'inline-block';
     document.getElementById('card-cita').classList.add('editando');
     calcularYMostrarPrecio();
-    mostrarVisualizadorHorarios(c.fecha);
+    mostrarVisualizadorHorarios(c.fecha, c.masajista || 'Luz');
 }
 
 function cancelarEdicionCliente() { 
@@ -626,7 +615,26 @@ function cancelarEdicionCliente() {
     document.getElementById('card-cliente').classList.remove('editando'); 
     document.getElementById('ficha-fidelidad').style.display = 'none'; 
 }
-function cancelarEdicionCita() { editandoCita = null; document.getElementById('f1').reset(); document.getElementById('d1').valueAsDate = new Date(); document.querySelector('input[name="duracion"][value="60"]').checked = true; document.getElementById('info-precio').style.display = 'none'; document.getElementById('aviso-fidelidad').style.display = 'none'; document.getElementById('esGratis').checked = false; document.getElementById('btn-cita').textContent = 'Guardar Cita'; document.getElementById('btn-cancelar-cita').style.display = 'none'; document.getElementById('card-cita').classList.remove('editando'); document.getElementById('c1').disabled = true; document.getElementById('c1').value = ''; document.getElementById('sv1').disabled = true; document.getElementById('sv1').value = ''; resetearDesdeDuracion(); document.getElementById('visualizador-horarios').style.display = 'none'; document.getElementById('alerta-solapamiento').classList.remove('visible'); }
+function cancelarEdicionCita() { 
+    editandoCita = null; 
+    document.getElementById('f1').reset(); 
+    document.getElementById('d1').valueAsDate = new Date(); 
+    document.getElementById('masajista').value = 'Luz';
+    document.querySelector('input[name="duracion"][value="60"]').checked = true; 
+    document.getElementById('info-precio').style.display = 'none'; 
+    document.getElementById('aviso-fidelidad').style.display = 'none'; 
+    document.getElementById('esGratis').checked = false; 
+    document.getElementById('btn-cita').textContent = 'Guardar Cita'; 
+    document.getElementById('btn-cancelar-cita').style.display = 'none'; 
+    document.getElementById('card-cita').classList.remove('editando'); 
+    document.getElementById('c1').disabled = true; 
+    document.getElementById('c1').value = ''; 
+    document.getElementById('sv1').disabled = true; 
+    document.getElementById('sv1').value = ''; 
+    resetearDesdeDuracion(); 
+    document.getElementById('visualizador-horarios').style.display = 'none'; 
+    document.getElementById('alerta-solapamiento').classList.remove('visible'); 
+}
 
 function actualizar() {
     document.getElementById('n1').textContent = clientes.length;
@@ -642,7 +650,8 @@ function actualizar() {
         var estado = c.cobrado ? '<span style="background:#d1fae5;color:#065f46;padding:4px 8px;border-radius:4px;">✓ Cobrado</span>' : '<span style="background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:4px;">⏳ Pendiente</span>';
         var btnCobrar = c.cobrado ? '' : '<button class="btn-cobrar" onclick="cobrarCita(\'' + c.id + '\')">Cobrar</button>';
         var gratisTag = c.esGratis ? ' <span style="background:#f59e0b;color:white;padding:2px 6px;border-radius:4px;">GRATIS</span>' : '';
-        html2 += '<tr class="' + (c.cobrado ? 'cobrado' : 'pendiente-pago') + '"><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + ' (' + c.duracion + ' min)' + gratisTag + '</td><td>' + c.duracion + ' min</td><td>' + (c.precio ? c.precio.toFixed(2) + '€' : '-') + '</td><td>' + estado + '</td><td>' + btnCobrar + '<button class="btn-editar" onclick="editarCita(\'' + c.id + '\')">Editar</button><button class="btn-eliminar" onclick="eliminarCita(\'' + c.id + '\')">Eliminar</button></td></tr>';
+        var masajistaTag = c.masajista ? '<span style="background:#8b5cf6;color:white;padding:2px 6px;border-radius:4px;font-size:12px;">👤 ' + c.masajista + '</span>' : '';
+        html2 += '<tr class="' + (c.cobrado ? 'cobrado' : 'pendiente-pago') + '"><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + ' (' + c.duracion + ' min)' + gratisTag + '</td><td>' + masajistaTag + '</td><td>' + (c.precio ? c.precio.toFixed(2) + '€' : '-') + '</td><td>' + estado + '</td><td>' + btnCobrar + '<button class="btn-editar" onclick="editarCita(\'' + c.id + '\')">Editar</button><button class="btn-eliminar" onclick="eliminarCita(\'' + c.id + '\')">Eliminar</button></td></tr>';
     });
     document.getElementById('tb1').innerHTML = html2;
     
@@ -665,7 +674,8 @@ function actualizar() {
             var esNoShow = (minCita + TIEMPO_NOSHOW) <= ahoraMin;
             var estilo = esNoShow ? 'background:#fee2e2;border-left:4px solid #ef4444;color:#991b1b;' : 'background:#f9fafb;';
             var etiqueta = esNoShow ? ' <span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold;">❌ NO SHOW</span>' : '';
-            hd += '<div style="padding:12px;margin:8px 0;border-radius:6px;' + estilo + '"><strong>' + c.cliente + '</strong> - ' + c.servicio + ' (' + c.hora + ')' + etiqueta + '</div>';
+            var masajistaInfo = c.masajista ? ' <span style="background:#8b5cf6;color:white;padding:2px 6px;border-radius:4px;font-size:11px;">👤 ' + c.masajista + '</span>' : '';
+            hd += '<div style="padding:12px;margin:8px 0;border-radius:6px;' + estilo + '"><strong>' + c.cliente + '</strong> - ' + c.servicio + ' (' + c.hora + ')' + masajistaInfo + etiqueta + '</div>';
         });
     }
     document.getElementById('dc').innerHTML = hd;
@@ -674,7 +684,7 @@ function actualizar() {
         var fechaCita = new Date(c.fecha + 'T' + c.hora);
         return fechaCita >= ahora;
     }).sort(function(a, b) { return new Date(a.fecha + 'T' + a.hora) - new Date(b.fecha + 'T' + b.hora); })[0];
-    document.getElementById('n3').textContent = prox ? (prox.cliente + ' (' + prox.fecha + ' ' + prox.hora + ')') : 'Ninguna';
+    document.getElementById('n3').textContent = prox ? (prox.cliente + ' (' + prox.fecha + ' ' + prox.hora + ' - ' + (prox.masajista || '?') + ')') : 'Ninguna';
 }
 
 function actualizarTablaClientes() {
@@ -709,12 +719,22 @@ function filtrarClientes() {
 
 function actualizarCaja() {
     var hoy = new Date().toISOString().split('T')[0];
-    var total = 0, ef = 0, tar = 0;
-    cobros.forEach(function(c) { if (c.fecha === hoy) { total += c.importe; if (c.metodo === 'Efectivo') ef += c.importe; else if (c.metodo === 'Tarjeta') tar += c.importe; } });
+    var total = 0, ef = 0, tar = 0, biz = 0, tra = 0;
+    cobros.forEach(function(c) { 
+        if (c.fecha === hoy) { 
+            total += c.importe; 
+            if (c.metodo === 'Efectivo') ef += c.importe; 
+            else if (c.metodo === 'Tarjeta') tar += c.importe; 
+            else if (c.metodo === 'Bizum') biz += c.importe; 
+            else if (c.metodo === 'Transferencia') tra += c.importe; 
+        } 
+    });
     var pendiente = 0; citas.forEach(function(c) { if (!c.cobrado && c.precio > 0) pendiente += c.precio; });
     document.getElementById('caja-hoy').textContent = total.toFixed(2) + '€';
     document.getElementById('caja-efectivo').textContent = ef.toFixed(2) + '€';
     document.getElementById('caja-tarjeta').textContent = tar.toFixed(2) + '€';
+    document.getElementById('caja-bizum').textContent = biz.toFixed(2) + '€';
+    document.getElementById('caja-transferencia').textContent = tra.toFixed(2) + '€';
     document.getElementById('caja-pendiente').textContent = pendiente.toFixed(2) + '€';
     var html = '';
     cobros.slice().sort(function(a, b) { return new Date(b.fecha) - new Date(a.fecha); }).forEach(function(c) { html += '<tr><td>' + c.fecha + '</td><td style="font-weight:bold;color:#10b981;">' + c.importe.toFixed(2) + '€</td><td>' + c.metodo + '</td><td>' + (c.cliente || '-') + '</td><td>' + (c.concepto || '-') + '</td><td><button class="btn-eliminar" onclick="eliminarCobro(\'' + c.id + '\')">Eliminar</button></td></tr>'; });
@@ -726,7 +746,7 @@ function cobrarCita(id) {
     if (!c) return;
     cobroPendiente = c;
     metodoSeleccionado = null;
-    document.getElementById('modal-cliente-info').innerHTML = '<strong>' + c.cliente + '</strong><br>' + c.servicio + ' (' + c.duracion + ' min)';
+    document.getElementById('modal-cliente-info').innerHTML = '<strong>' + c.cliente + '</strong><br>' + c.servicio + ' (' + c.duracion + ' min) - 👤 ' + (c.masajista || '?');
     document.getElementById('modal-importe').textContent = c.precio.toFixed(2) + '€';
     document.querySelectorAll('.metodo-pago').forEach(function(el) { el.classList.remove('selected'); });
     document.getElementById('modal-cobro').classList.add('visible');
@@ -737,7 +757,7 @@ function seleccionarMetodo(metodo, elemento) { metodoSeleccionado = metodo; docu
 function confirmarCobro() {
     if (!cobroPendiente || !metodoSeleccionado) { alert('Selecciona método'); return; }
     var c = cobroPendiente;
-    db.collection('cobros').add({ fecha: c.fecha, importe: c.precio, metodo: metodoSeleccionado, cliente: c.cliente, concepto: c.servicio + ' (' + c.duracion + ' min)' + (c.esGratis ? ' [GRATIS]' : ''), notas: 'Cobro de cita del ' + c.fecha });
+    db.collection('cobros').add({ fecha: c.fecha, importe: c.precio, metodo: metodoSeleccionado, cliente: c.cliente, concepto: c.servicio + ' (' + c.duracion + ' min)' + (c.esGratis ? ' [GRATIS]' : '') + ' - ' + (c.masajista || ''), notas: 'Cobro de cita del ' + c.fecha });
     db.collection('citas').doc(c.id).update({cobrado: true});
     cerrarModalCobro();
     mostrarEstado('✅ Cobro registrado', 2000);
@@ -775,17 +795,18 @@ function actualizarListadoMasajes() {
         if (fFin && c.fecha > fFin) return false;
         if (cliente && c.cliente !== cliente) return false;
         if (servicio && c.servicio !== servicio) return false;
-        if (busqueda && !(c.fecha + ' ' + c.hora + ' ' + c.cliente + ' ' + c.servicio).toLowerCase().includes(busqueda)) return false;
+        if (busqueda && !(c.fecha + ' ' + c.hora + ' ' + c.cliente + ' ' + c.servicio + ' ' + (c.masajista || '')).toLowerCase().includes(busqueda)) return false;
         return true;
     }).sort(function(a, b) { return new Date(a.fecha + 'T' + a.hora) - new Date(b.fecha + 'T' + b.hora); });
     var html = '';
     filtradas.forEach(function(c) {
         var cobro = cobros.find(function(cb) { return cb.cliente === c.cliente && cb.concepto.includes(c.servicio) && cb.fecha === c.fecha; });
         var metodo = cobro ? cobro.metodo : '-';
-        var estado = c.cobrado ? '<span style="color:#10b981;">✓</span>' : '<span style="color:#f59e0b;">⏳</span>';
-        html += '<tr><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + '</td><td>' + c.duracion + ' min</td><td>' + c.precio.toFixed(2) + '€</td><td>' + metodo + '</td><td>' + estado + '</td></tr>';
+        var estado = c.cobrado ? '<span style="color:#10b981;">✓</span>' : '<span style="color:#f59e0b;"></span>';
+        var masajistaInfo = c.masajista ? '<span style="background:#8b5cf6;color:white;padding:2px 6px;border-radius:4px;font-size:11px;">👤 ' + c.masajista + '</span>' : '-';
+        html += '<tr><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + '</td><td>' + masajistaInfo + '</td><td>' + c.duracion + ' min</td><td>' + c.precio.toFixed(2) + '€</td><td>' + metodo + '</td><td>' + estado + '</td></tr>';
     });
-    document.getElementById('tb-listado-masajes').innerHTML = html || '<tr><td colspan="8" style="text-align:center;">Sin resultados</td></tr>';
+    document.getElementById('tb-listado-masajes').innerHTML = html || '<tr><td colspan="9" style="text-align:center;">Sin resultados</td></tr>';
 }
 
 function actualizarHistorico() {
@@ -812,7 +833,7 @@ function actualizarHistorico() {
         if (fFin && c.fecha > fFin) return false;
         if (cliente && c.cliente !== cliente) return false;
         if (servicio && c.servicio !== servicio) return false;
-        if (busqueda && !(c.fecha + ' ' + c.hora + ' ' + c.cliente + ' ' + c.servicio).toLowerCase().includes(busqueda)) return false;
+        if (busqueda && !(c.fecha + ' ' + c.hora + ' ' + c.cliente + ' ' + c.servicio + ' ' + (c.masajista || '')).toLowerCase().includes(busqueda)) return false;
         return true;
     }).sort(function(a, b) { return new Date(b.fecha + 'T' + b.hora) - new Date(a.fecha + 'T' + a.hora); });
     var html = '';
@@ -821,7 +842,7 @@ function actualizarHistorico() {
     historicas.forEach(function(c) {
         var cobro = cobros.find(function(cb) { return cb.cliente === c.cliente && cb.concepto.includes(c.servicio) && cb.fecha === c.fecha; });
         var metodo = cobro ? cobro.metodo : '-';
-        var estado = c.cobrado ? '<span style="color:#10b981;font-weight:bold;">✓ Cobrado</span>' : '<span style="color:#ef4444;font-weight:bold;"> No cobrado</span>';
+        var estado = c.cobrado ? '<span style="color:#10b981;font-weight:bold;">✓ Cobrado</span>' : '<span style="color:#ef4444;font-weight:bold;">✗ No cobrado</span>';
         if (c.cobrado) totalHistorico += c.precio || 0;
         var partes = c.hora.split(':');
         var minCita = parseInt(partes[0]) * 60 + parseInt(partes[1]);
@@ -829,9 +850,10 @@ function actualizarHistorico() {
         if (esNoShow) noShows++;
         var rowClass = esNoShow ? ' style="background:#fee2e2;"' : '';
         var noShowTag = esNoShow ? ' <span style="background:#ef4444;color:white;padding:2px 6px;border-radius:4px;font-size:11px;">NO SHOW</span>' : '';
-        html += '<tr' + rowClass + '><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + '</td><td>' + c.duracion + ' min</td><td>' + (c.precio ? c.precio.toFixed(2) + '€' : '-') + '</td><td>' + metodo + '</td><td>' + estado + noShowTag + '</td></tr>';
+        var masajistaInfo = c.masajista ? '<span style="background:#8b5cf6;color:white;padding:2px 6px;border-radius:4px;font-size:11px;"> ' + c.masajista + '</span>' : '';
+        html += '<tr' + rowClass + '><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + '</td><td>' + masajistaInfo + '</td><td>' + c.duracion + ' min</td><td>' + (c.precio ? c.precio.toFixed(2) + '€' : '-') + '</td><td>' + metodo + '</td><td>' + estado + noShowTag + '</td></tr>';
     });
-    document.getElementById('tb-historico').innerHTML = html || '<tr><td colspan="8" style="text-align:center;">No hay citas en el histórico</td></tr>';
+    document.getElementById('tb-historico').innerHTML = html || '<tr><td colspan="9" style="text-align:center;">No hay citas en el histórico</td></tr>';
     document.getElementById('hist-total').textContent = totalHistorico.toFixed(2) + '€';
     document.getElementById('hist-noshows').textContent = noShows;
     document.getElementById('hist-contador').textContent = historicas.length + ' citas';
@@ -901,9 +923,11 @@ window.onload = function() {
     document.getElementById('f2').onsubmit = guardarCliente;
     document.getElementById('f1').onsubmit = guardarCita;
     document.getElementById('f3').onsubmit = function(e) { e.preventDefault(); db.collection('cobros').add({ fecha: document.getElementById('cb1').value, importe: parseFloat(document.getElementById('cb2').value), metodo: document.getElementById('cb3').value, cliente: document.getElementById('cb4').value, concepto: document.getElementById('cb5').value, notas: document.getElementById('cb6').value }); this.reset(); document.getElementById('cb1').valueAsDate = new Date(); mostrarEstado('✅ Cobro registrado', 2000); };
-    document.getElementById('t1').addEventListener('click', function(e) { if (!this.disabled && document.getElementById('d1').value) abrirSelectorHoras(); });
+    document.getElementById('t1').addEventListener('click', function(e) { if (!this.disabled && document.getElementById('d1').value && document.getElementById('masajista').value) abrirSelectorHoras(); });
     document.getElementById('modal-cobro').addEventListener('click', function(e) { if (e.target === this) cerrarModalCobro(); });
     document.getElementById('p1').addEventListener('input', function() { var btn = document.getElementById('btn-cita'); btn.disabled = !(this.value && parseFloat(this.value) > 0); btn.textContent = btn.disabled ? 'Introduce el precio' : 'Guardar Cita'; });
+    document.getElementById('d1').addEventListener('change', onFechaHoraChange);
+    document.getElementById('masajista').addEventListener('change', onMasajistaChange);
     document.getElementById('b1').onclick = function() { cambiar(1); };
     document.getElementById('b2').onclick = function() { cambiar(2); };
     document.getElementById('b3').onclick = function() { cambiar(3); actualizarTablaClientes(); };
@@ -961,12 +985,14 @@ th { background: #f0fdfa; color: #0f766e; }
 .alerta-regalo .texto strong { color: #92400e; font-size: 1.1rem; }
 .estado-guardado { position: fixed; bottom: 20px; right: 20px; background: #059669; color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0; transition: opacity 0.3s; z-index: 1000; }
 .estado-guardado.visible { opacity: 1; }
-.stats-caja { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+.stats-caja { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
 .stat-box { background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #0d9488; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 .stat-box h4 { margin: 0 0 10px 0; color: #64748b; font-size: 14px; }
 .stat-box .amount { font-size: 2rem; font-weight: bold; color: #0d9488; }
 .stat-box.efectivo { border-left-color: #10b981; } .stat-box.efectivo .amount { color: #10b981; }
 .stat-box.tarjeta { border-left-color: #3b82f6; } .stat-box.tarjeta .amount { color: #3b82f6; }
+.stat-box.bizum { border-left-color: #8b5cf6; } .stat-box.bizum .amount { color: #8b5cf6; }
+.stat-box.transferencia { border-left-color: #f59e0b; } .stat-box.transferencia .amount { color: #f59e0b; }
 .stat-box.pendiente { border-left-color: #f59e0b; } .stat-box.pendiente .amount { color: #f59e0b; }
 .cobrado { background: #d1fae5; } .pendiente-pago { background: #fef3c7; }
 .filtros-grafico { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
@@ -1074,7 +1100,8 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 .resumen-label { font-size: 14px; color: #64748b; margin-bottom: 8px; font-weight: bold; }
 .resumen-valor { font-size: 2.5rem; font-weight: bold; }
 .resumen-valor-small { font-size: 1.2rem; font-weight: bold; }
-
+.masajista-selector { display: flex; gap: 10px; margin: 10px 0; }
+.masajista-selector select { flex: 1; }
 .banner-instalacion {
     position: fixed;
     bottom: 0;
@@ -1101,51 +1128,14 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
     gap: 20px;
     flex-wrap: wrap;
 }
-.banner-instalacion .texto-banner {
-    flex: 1;
-    min-width: 200px;
-}
-.banner-instalacion .texto-banner h3 {
-    margin: 0 0 5px 0;
-    font-size: 18px;
-}
-.banner-instalacion .texto-banner p {
-    margin: 0;
-    font-size: 14px;
-    opacity: 0.9;
-}
-.banner-instalacion .botones-banner {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-.banner-instalacion .btn-instalar {
-    background: white;
-    color: #0d9488;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-.banner-instalacion .btn-instalar:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-.banner-instalacion .btn-cerrar-banner {
-    background: transparent;
-    color: white;
-    border: 2px solid white;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-.banner-instalacion .btn-cerrar-banner:hover {
-    background: rgba(255,255,255,0.2);
-}
+.banner-instalacion .texto-banner { flex: 1; min-width: 200px; }
+.banner-instalacion .texto-banner h3 { margin: 0 0 5px 0; font-size: 18px; }
+.banner-instalacion .texto-banner p { margin: 0; font-size: 14px; opacity: 0.9; }
+.banner-instalacion .botones-banner { display: flex; gap: 10px; align-items: center; }
+.banner-instalacion .btn-instalar { background: white; color: #0d9488; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.3s; }
+.banner-instalacion .btn-instalar:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.banner-instalacion .btn-cerrar-banner { background: transparent; color: white; border: 2px solid white; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.3s; }
+.banner-instalacion .btn-cerrar-banner:hover { background: rgba(255,255,255,0.2); }
 
 @media (max-width: 767px) {
     body { font-size: 17px !important; }
@@ -1163,65 +1153,16 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
     #btn-exportar, #btn-importar, #btn-reset { font-size: 12px !important; padding: 8px 12px !important; }
     .resumen-grid { grid-template-columns: repeat(2, 1fr) !important; }
     .resumen-valor { font-size: 2rem !important; }
-    .banner-instalacion .contenido-banner {
-        flex-direction: column;
-        text-align: center;
-    }
-    .banner-instalacion .botones-banner {
-        width: 100%;
-        justify-content: center;
-    }
-    /* Tabla de clientes en móvil - formato tarjeta */
-    #tb2 tr {
-        display: block;
-        background: white;
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 12px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-        border: 1px solid #e5e7eb;
-    }
-    #tb2 tr td {
-        display: block;
-        padding: 6px 0 !important;
-        border: none !important;
-        text-align: left !important;
-        font-size: 15px !important;
-    }
-    #tb2 tr td:first-child {
-        font-size: 17px !important;
-        font-weight: bold;
-        color: #0d9488;
-        margin-bottom: 5px;
-    }
-    #tb2 tr td:nth-child(2) {
-        color: #64748b;
-    }
-    #tb2 tr td:nth-child(3) {
-        color: #64748b;
-    }
-    #tb2 tr td:nth-child(4) {
-        font-weight: bold;
-        color: #0d9488;
-        font-size: 16px !important;
-    }
-    #tb2 tr td:last-child {
-        display: flex;
-        gap: 8px;
-        margin-top: 10px;
-        flex-wrap: wrap;
-    }
-    #tb2 tr td:last-child button {
-        flex: 1;
-        min-width: 80px;
-        padding: 10px 12px !important;
-        font-size: 14px !important;
-        text-align: center;
-    }
-    /* Ocultar cabecera de tabla en móvil */
-    #tb2 thead {
-        display: none;
-    }
+    .banner-instalacion .contenido-banner { flex-direction: column; text-align: center; }
+    .banner-instalacion .botones-banner { width: 100%; justify-content: center; }
+    #tb2 tr { display: block; background: white; border-radius: 10px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); border: 1px solid #e5e7eb; }
+    #tb2 tr td { display: block; padding: 6px 0 !important; border: none !important; text-align: left !important; font-size: 15px !important; }
+    #tb2 tr td:first-child { font-size: 17px !important; font-weight: bold; color: #0d9488; margin-bottom: 5px; }
+    #tb2 tr td:nth-child(2), #tb2 tr td:nth-child(3) { color: #64748b; }
+    #tb2 tr td:nth-child(4) { font-weight: bold; color: #0d9488; font-size: 16px !important; }
+    #tb2 tr td:last-child { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    #tb2 tr td:last-child button { flex: 1; min-width: 80px; padding: 10px 12px !important; font-size: 14px !important; text-align: center; }
+    #tb2 thead { display: none; }
 }
 @media (max-width: 479px) { 
     .header { padding: 5px; } 
@@ -1233,7 +1174,6 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </head>
 <body>
 
-<!-- Banner de Instalación PWA -->
 <div id="banner-instalacion" class="banner-instalacion">
     <div class="contenido-banner">
         <div class="texto-banner">
@@ -1263,14 +1203,14 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 
 <div class="nav">
 <button id="b1" class="active">📊 Resumen</button>
-<button id="b2"> Agenda</button>
+<button id="b2">📅 Agenda</button>
 <button id="b3">👥 Clientes</button>
 <button id="b4">💰 Caja</button>
-<button id="b6">📜 Histórico</button>
+<button id="b6"> Histórico</button>
 <button id="b7">💵 Tarifas</button>
-<button id="btn-exportar" style="float:right;background:#059669;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;"> Copia</button>
-<button id="btn-importar" style="float:right;background:#8b5cf6;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">📥 Importar</button>
-<button id="btn-reset" style="float:right;background:#ef4444;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">🗑️ Resetear</button>
+<button id="btn-exportar" style="float:right;background:#059669;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">💾 Copia</button>
+<button id="btn-importar" style="float:right;background:#8b5cf6;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;"> Importar</button>
+<button id="btn-reset" style="float:right;background:#ef4444;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">️ Resetear</button>
 </div>
 <input type="file" id="input-importar" accept=".json" style="display:none;">
 
@@ -1310,10 +1250,18 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <h3>Nueva Cita</h3>
 <form id="f1">
 <input type="date" id="d1" required onchange="onFechaHoraChange()">
-<input type="text" id="t1" readonly placeholder="👇 Selecciona una hora abajo" 
+
+<label><strong>👤 Masajista:</strong></label>
+<select id="masajista" required onchange="onMasajistaChange()" style="background:#f0fdfa;font-weight:bold;">
+    <option value="">Selecciona masajista...</option>
+    <option value="Luz" selected>Luz (Dueña)</option>
+    <option value="Laura">Laura</option>
+</select>
+
+<input type="text" id="t1" readonly placeholder="👇 Primero selecciona fecha y masajista" 
        style="cursor: pointer; background-color: #f0fdfa; text-align: center; font-weight: bold;" 
        onclick="abrirSelectorHoras()">
-<p class="hora-hint">💡 Haz clic en el campo de hora para ver las horas disponibles</p>
+<p class="hora-hint">💡 Cada masajista tiene su propia disponibilidad. Las dos pueden atender a la misma hora.</p>
 <div id="visualizador-horarios" class="horario-visualizador" style="display:none;">
     <h4>📅 Horarios disponibles para <span id="fecha-seleccionada"></span></h4>
     <div class="horario-grid" id="horario-grid"></div>
@@ -1321,13 +1269,13 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
         <div class="horario-leyenda-item"><div class="horario-leyenda-color libre"></div><span>Disponible</span></div>
         <div class="horario-leyenda-item"><div class="horario-leyenda-color seleccionado"></div><span>Seleccionado</span></div>
         <div class="horario-leyenda-item"><div class="horario-leyenda-color limpieza"></div><span>🧹 Limpieza</span></div>
-        <div class="horario-leyenda-item"><div class="horario-leyenda-color ocupado"></div><span>🔒 Ocupado</span></div>
+        <div class="horario-leyenda-item"><div class="horario-leyenda-color ocupado"></div><span> Ocupado</span></div>
     </div>
 </div>
 <div id="alerta-solapamiento" class="alerta-solapamiento">
     <strong>⚠️ Conflicto de horario:</strong> <span id="mensaje-solapamiento"></span>
 </div>
-<select id="c1" required onchange="onClienteChange()" disabled><option value="">Primero selecciona fecha y hora...</option></select>
+<select id="c1" required onchange="onClienteChange()" disabled><option value="">Primero selecciona fecha, masajista y hora...</option></select>
 <div id="aviso-fidelidad" style="display:none;"></div>
 <label><strong>Tipo de Masaje:</strong></label>
 <select id="sv1" required onchange="onServicioChange()" disabled>
@@ -1374,7 +1322,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </div>
 <div class="card">
 <table>
-<thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Duración</th><th>Precio</th><th>Estado</th><th>Acciones</th></tr></thead>
+<thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Masajista</th><th>Precio</th><th>Estado</th><th>Acciones</th></tr></thead>
 <tbody id="tb1"></tbody>
 </table>
 </div>
@@ -1416,6 +1364,8 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div class="stat-box"><h4>Total Hoy</h4><div class="amount" id="caja-hoy">0€</div></div>
 <div class="stat-box efectivo"><h4>Efectivo</h4><div class="amount" id="caja-efectivo">0€</div></div>
 <div class="stat-box tarjeta"><h4>Tarjeta</h4><div class="amount" id="caja-tarjeta">0€</div></div>
+<div class="stat-box bizum"><h4>Bizum</h4><div class="amount" id="caja-bizum">0€</div></div>
+<div class="stat-box transferencia"><h4>Transferencia</h4><div class="amount" id="caja-transferencia">0€</div></div>
 <div class="stat-box pendiente"><h4>Pendiente de Cobro</h4><div class="amount" id="caja-pendiente">0€</div></div>
 </div>
 <div class="card">
@@ -1459,7 +1409,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div class="grafico-container"><canvas id="graficoMetodos"></canvas></div>
 </div>
 <div class="card">
-<h3>📋 Listado de Masajes Realizados</h3>
+<h3> Listado de Masajes Realizados</h3>
 <div class="busqueda-rapida">
     <input type="text" id="busqueda-masajes" placeholder="🔍 Buscar en el listado..." oninput="actualizarListadoMasajes()">
 </div>
@@ -1479,7 +1429,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
     </select></div>
 </div>
 <table>
-    <thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Duración</th><th>Precio</th><th>Método</th><th>Estado</th></tr></thead>
+    <thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Masajista</th><th>Duración</th><th>Precio</th><th>Método</th><th>Estado</th></tr></thead>
     <tbody id="tb-listado-masajes"></tbody>
 </table>
 </div>
@@ -1522,7 +1472,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </div>
 <div class="card">
 <table>
-<thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Duración</th><th>Precio</th><th>Método</th><th>Estado</th></tr></thead>
+<thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Masajista</th><th>Duración</th><th>Precio</th><th>Método</th><th>Estado</th></tr></thead>
 <tbody id="tb-historico"></tbody>
 </table>
 </div>
@@ -1570,7 +1520,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </div>
 </div>
 
-<div id="estado" class="estado-guardado"> Guardado en la nube</div>
+<div id="estado" class="estado-guardado">💾 Guardado en la nube</div>
 
 <div id="modal-cobro" class="modal-overlay">
     <div class="modal-content">
@@ -1579,7 +1529,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
         <div class="importe-grande" id="modal-importe">0€</div>
         <p style="text-align:center;color:#64748b;margin-bottom:10px;"><strong>Selecciona método de pago:</strong></p>
         <div class="metodos-pago">
-            <div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)"><span class="icono">💵</span><span class="nombre">Efectivo</span></div>
+            <div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)"><span class="icono"></span><span class="nombre">Efectivo</span></div>
             <div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)"><span class="icono">💳</span><span class="nombre">Tarjeta</span></div>
             <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)"><span class="icono">📱</span><span class="nombre">Bizum</span></div>
             <div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"><span class="icono">🏦</span><span class="nombre">Transferencia</span></div>
