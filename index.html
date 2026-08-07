@@ -37,6 +37,7 @@ var graficoMetodos = null;
 var deferredPrompt = null;
 
 var MASAJISTAS = ['Luz', 'Laura'];
+var COLORES_MASAJISTAS = { 'Luz': '#ef4444', 'Laura': '#8b5cf6' };
 
 var tarifasPorDefecto = {
     'relajante_60': 50, 'relajante_90': 75, 'relajante_120': 100,
@@ -50,6 +51,14 @@ var tarifasPorDefecto = {
 
 var TIEMPO_LIMPIEZA = 15;
 var TIEMPO_NOSHOW = 120;
+
+// ===== ETIQUETA DE MASAJISTA CON COLOR =====
+function getMasajistaTag(masajista, tamaño) {
+    if (!masajista) return '';
+    tamaño = tamaño || '12px';
+    var color = COLORES_MASAJISTAS[masajista] || '#8b5cf6';
+    return '<span style="background:' + color + ';color:white;padding:2px 6px;border-radius:4px;font-size:' + tamaño + ';font-weight:bold;">👤 ' + masajista + '</span>';
+}
 
 function iniciarSincronizacion() {
     db.collection('clientes').onSnapshot(snapshot => {
@@ -147,7 +156,7 @@ history.pushState(null, null, window.location.href);
 function resetearBaseDatos() {
     var codigo = prompt('⚠️ ATENCIÓN: Esta acción borrará TODOS los datos.\n\nPara confirmar, escribe: RESET\n\n(Se borrarán: clientes, citas y cobros.\nLas tarifas se mantendrán.)');
     if (codigo !== 'RESET') {
-        if (codigo !== null) alert('❌ Código incorrecto. No se ha borrado nada.');
+        if (codigo !== null) alert(' Código incorrecto. No se ha borrado nada.');
         return;
     }
     var confirmacion = prompt('🔴 ÚLTIMA CONFIRMACIÓN\n\nEscribe BORRAR para eliminar todos los datos permanentemente.');
@@ -163,7 +172,7 @@ function resetearBaseDatos() {
         alert('✅ Base de datos reseteada correctamente.\n\nLa página se recargará en 2 segundos.');
         setTimeout(function() { location.reload(); }, 2000);
     }).catch(function(err) {
-        alert('❌ Error al resetear: ' + err.message);
+        alert(' Error al resetear: ' + err.message);
     });
 }
 
@@ -253,7 +262,6 @@ function verificarEstadoHorario(fecha, horaInicio, masajista, citaIdExcluir) {
     if (!fecha || !horaInicio || !masajista) return 'libre';
     var partes = horaInicio.split(':');
     var minInicio = parseInt(partes[0]) * 60 + parseInt(partes[1]);
-    // Solo citas del MISMO masajista
     var citasDia = citas.filter(function(c) { return c.fecha === fecha && c.masajista === masajista && c.id !== citaIdExcluir; });
     for (var i = 0; i < citasDia.length; i++) {
         var partesCita = citasDia[i].hora.split(':');
@@ -272,7 +280,6 @@ function verificarSolapamiento(fecha, horaInicio, duracionMin, masajista, citaId
     var partes = horaInicio.split(':');
     var minInicio = parseInt(partes[0]) * 60 + parseInt(partes[1]);
     var minFin = minInicio + (duracionMin || 0);
-    // Solo citas del MISMO masajista
     var citasDia = citas.filter(function(c) { return c.fecha === fecha && c.masajista === masajista && c.id !== citaIdExcluir; });
     for (var i = 0; i < citasDia.length; i++) {
         var partesCita = citasDia[i].hora.split(':');
@@ -330,7 +337,6 @@ function onFechaHoraChange() {
 }
 
 function onMasajistaChange() {
-    // Al cambiar masajista, limpiar hora y actualizar visualizador
     document.getElementById('t1').value = '';
     onFechaHoraChange();
 }
@@ -371,7 +377,10 @@ function calcularYMostrarPrecio() {
     var precio = tarifas[mapa[servicio] + '_' + duracion] || 0;
     document.getElementById('precio-tarifa').textContent = precio.toFixed(2) + '€';
     document.getElementById('info-precio').style.display = 'block';
-    document.getElementById('p1').value = precio.toFixed(2);
+    // Solo actualizar el precio si NO es gratis
+    if (!document.getElementById('esGratis').checked) {
+        document.getElementById('p1').value = precio.toFixed(2);
+    }
 }
 
 function activarCamposFinales() {
@@ -382,6 +391,14 @@ function activarCamposFinales() {
     document.getElementById('nt1').disabled = false;
     document.getElementById('btn-cita').disabled = false;
     document.getElementById('btn-cita').textContent = 'Guardar Cita';
+    
+    // Si el checkbox "esGratis" está marcado, aplicar lógica de gratis
+    if (document.getElementById('esGratis').checked) {
+        document.getElementById('p1').value = '0.00';
+        document.getElementById('p1').disabled = true;
+        document.getElementById('info-precio').style.display = 'none';
+        document.getElementById('btn-cita').textContent = 'Guardar Cita GRATIS';
+    }
 }
 
 function resetearDesdeDuracion() {
@@ -398,6 +415,40 @@ function resetearDesdeDuracion() {
     document.getElementById('btn-cita').disabled = true;
     document.getElementById('btn-cita').textContent = 'Completa todos los campos';
     document.getElementById('info-precio').style.display = 'none';
+}
+
+// ===== CONTROL DEL CHECKBOX "ES GRATIS" =====
+function aplicarLogicaGratis() {
+    var precioInput = document.getElementById('p1');
+    var infoPrecio = document.getElementById('info-precio');
+    var labelGratis = document.getElementById('label-gratis');
+    var btnCita = document.getElementById('btn-cita');
+    
+    if (document.getElementById('esGratis').checked) {
+        // Si es gratis: precio a 0 y desactivado
+        precioInput.value = '0.00';
+        precioInput.disabled = true;
+        infoPrecio.style.display = 'none';
+        labelGratis.style.background = '#fef3c7';
+        labelGratis.style.borderRadius = '8px';
+        labelGratis.style.padding = '10px';
+        btnCita.disabled = false;
+        btnCita.textContent = 'Guardar Cita GRATIS';
+    } else {
+        // Si no es gratis: restaurar precio de tarifa
+        var servicio = document.getElementById('sv1').value;
+        var duracion = document.querySelector('input[name="duracion"]:checked');
+        if (servicio && duracion) {
+            var mapa = {'Masaje relajante': 'relajante', 'Masaje terapéutico': 'terapeutico', 'Masaje descontracturante': 'descontracturante', 'Masaje de Espalda': 'espalda', 'Masaje de Piernas': 'piernas', 'Masaje deportivo': 'deportivo', 'Reflexología podal (RTP)': 'rtp'};
+            var precio = tarifas[mapa[servicio] + '_' + duracion.value] || 0;
+            precioInput.value = precio.toFixed(2);
+            precioInput.disabled = false;
+            infoPrecio.style.display = 'block';
+            labelGratis.style.background = 'transparent';
+            labelGratis.style.padding = '0';
+            btnCita.textContent = 'Guardar Cita';
+        }
+    }
 }
 
 // ===== FIDELIZACIÓN =====
@@ -511,7 +562,7 @@ function guardarCita(e) {
     var clienteNombre = document.getElementById('c1').value;
     var puntos = getPuntosPorDuracion(duracion);
     
-    if (!masajista) { alert('❌ Selecciona una masajista'); return; }
+    if (!masajista) { alert(' Selecciona una masajista'); return; }
     if (verificarSolapamiento(fecha, hora, parseInt(duracion), masajista, editandoCita)) { 
         alert('❌ Ya existe una cita para ' + masajista + ' a esa hora'); 
         return; 
@@ -546,7 +597,7 @@ function guardarCita(e) {
                     var nuevosPuntos = (cliente.puntosFidelidad || 0) + puntos;
                     db.collection('clientes').doc(cliente.id).update({puntosFidelidad: nuevosPuntos});
                     if (nuevosPuntos >= 10 && (nuevosPuntos - puntos) < 10) {
-                        setTimeout(function() { alert(' ¡' + cliente.nombre + ' ha alcanzado los 10 puntos!\n\nTIENE 1 MASAJE GRATIS DISPONIBLE'); }, 500);
+                        setTimeout(function() { alert('🎉 ¡' + cliente.nombre + ' ha alcanzado los 10 puntos!\n\nTIENE 1 MASAJE GRATIS DISPONIBLE'); }, 500);
                     }
                     mostrarEstado('✅ Cita guardada - +' + puntos + ' puntos', 2000);
                 }
@@ -560,7 +611,7 @@ function guardarCita(e) {
 
 function eliminarCliente(id) { if(confirm('¿Eliminar?')) { db.collection('clientes').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
 function eliminarCita(id) { if(confirm('¿Eliminar?')) { db.collection('citas').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
-function eliminarCobro(id) { if(confirm('¿Eliminar?')) { db.collection('cobros').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
+function eliminarCobro(id) { if(confirm('¿Eliminar?')) { db.collection('cobros').doc(id).delete(); mostrarEstado('️ Eliminado', 2000); } }
 
 function editarCliente(id) {
     var c = clientes.find(function(x) { return x.id === id; });
@@ -604,6 +655,7 @@ function editarCita(id) {
     document.getElementById('btn-cancelar-cita').style.display = 'inline-block';
     document.getElementById('card-cita').classList.add('editando');
     calcularYMostrarPrecio();
+    aplicarLogicaGratis();
     mostrarVisualizadorHorarios(c.fecha, c.masajista || 'Luz');
 }
 
@@ -650,7 +702,7 @@ function actualizar() {
         var estado = c.cobrado ? '<span style="background:#d1fae5;color:#065f46;padding:4px 8px;border-radius:4px;">✓ Cobrado</span>' : '<span style="background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:4px;">⏳ Pendiente</span>';
         var btnCobrar = c.cobrado ? '' : '<button class="btn-cobrar" onclick="cobrarCita(\'' + c.id + '\')">Cobrar</button>';
         var gratisTag = c.esGratis ? ' <span style="background:#f59e0b;color:white;padding:2px 6px;border-radius:4px;">GRATIS</span>' : '';
-        var masajistaTag = c.masajista ? '<span style="background:#8b5cf6;color:white;padding:2px 6px;border-radius:4px;font-size:12px;">👤 ' + c.masajista + '</span>' : '';
+        var masajistaTag = getMasajistaTag(c.masajista, '12px');
         html2 += '<tr class="' + (c.cobrado ? 'cobrado' : 'pendiente-pago') + '"><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + ' (' + c.duracion + ' min)' + gratisTag + '</td><td>' + masajistaTag + '</td><td>' + (c.precio ? c.precio.toFixed(2) + '€' : '-') + '</td><td>' + estado + '</td><td>' + btnCobrar + '<button class="btn-editar" onclick="editarCita(\'' + c.id + '\')">Editar</button><button class="btn-eliminar" onclick="eliminarCita(\'' + c.id + '\')">Eliminar</button></td></tr>';
     });
     document.getElementById('tb1').innerHTML = html2;
@@ -674,8 +726,8 @@ function actualizar() {
             var esNoShow = (minCita + TIEMPO_NOSHOW) <= ahoraMin;
             var estilo = esNoShow ? 'background:#fee2e2;border-left:4px solid #ef4444;color:#991b1b;' : 'background:#f9fafb;';
             var etiqueta = esNoShow ? ' <span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold;">❌ NO SHOW</span>' : '';
-            var masajistaInfo = c.masajista ? ' <span style="background:#8b5cf6;color:white;padding:2px 6px;border-radius:4px;font-size:11px;">👤 ' + c.masajista + '</span>' : '';
-            hd += '<div style="padding:12px;margin:8px 0;border-radius:6px;' + estilo + '"><strong>' + c.cliente + '</strong> - ' + c.servicio + ' (' + c.hora + ')' + masajistaInfo + etiqueta + '</div>';
+            var masajistaInfo = getMasajistaTag(c.masajista, '11px');
+            hd += '<div style="padding:12px;margin:8px 0;border-radius:6px;' + estilo + '"><strong>' + c.cliente + '</strong> - ' + c.servicio + ' (' + c.hora + ') ' + masajistaInfo + etiqueta + '</div>';
         });
     }
     document.getElementById('dc').innerHTML = hd;
@@ -746,7 +798,7 @@ function cobrarCita(id) {
     if (!c) return;
     cobroPendiente = c;
     metodoSeleccionado = null;
-    document.getElementById('modal-cliente-info').innerHTML = '<strong>' + c.cliente + '</strong><br>' + c.servicio + ' (' + c.duracion + ' min) - 👤 ' + (c.masajista || '?');
+    document.getElementById('modal-cliente-info').innerHTML = '<strong>' + c.cliente + '</strong><br>' + c.servicio + ' (' + c.duracion + ' min) ' + getMasajistaTag(c.masajista, '12px');
     document.getElementById('modal-importe').textContent = c.precio.toFixed(2) + '€';
     document.querySelectorAll('.metodo-pago').forEach(function(el) { el.classList.remove('selected'); });
     document.getElementById('modal-cobro').classList.add('visible');
@@ -802,8 +854,8 @@ function actualizarListadoMasajes() {
     filtradas.forEach(function(c) {
         var cobro = cobros.find(function(cb) { return cb.cliente === c.cliente && cb.concepto.includes(c.servicio) && cb.fecha === c.fecha; });
         var metodo = cobro ? cobro.metodo : '-';
-        var estado = c.cobrado ? '<span style="color:#10b981;">✓</span>' : '<span style="color:#f59e0b;"></span>';
-        var masajistaInfo = c.masajista ? '<span style="background:#8b5cf6;color:white;padding:2px 6px;border-radius:4px;font-size:11px;">👤 ' + c.masajista + '</span>' : '-';
+        var estado = c.cobrado ? '<span style="color:#10b981;">✓</span>' : '<span style="color:#f59e0b;">⏳</span>';
+        var masajistaInfo = getMasajistaTag(c.masajista, '11px') || '-';
         html += '<tr><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + '</td><td>' + masajistaInfo + '</td><td>' + c.duracion + ' min</td><td>' + c.precio.toFixed(2) + '€</td><td>' + metodo + '</td><td>' + estado + '</td></tr>';
     });
     document.getElementById('tb-listado-masajes').innerHTML = html || '<tr><td colspan="9" style="text-align:center;">Sin resultados</td></tr>';
@@ -842,7 +894,7 @@ function actualizarHistorico() {
     historicas.forEach(function(c) {
         var cobro = cobros.find(function(cb) { return cb.cliente === c.cliente && cb.concepto.includes(c.servicio) && cb.fecha === c.fecha; });
         var metodo = cobro ? cobro.metodo : '-';
-        var estado = c.cobrado ? '<span style="color:#10b981;font-weight:bold;">✓ Cobrado</span>' : '<span style="color:#ef4444;font-weight:bold;">✗ No cobrado</span>';
+        var estado = c.cobrado ? '<span style="color:#10b981;font-weight:bold;">✓ Cobrado</span>' : '<span style="color:#ef4444;font-weight:bold;"> No cobrado</span>';
         if (c.cobrado) totalHistorico += c.precio || 0;
         var partes = c.hora.split(':');
         var minCita = parseInt(partes[0]) * 60 + parseInt(partes[1]);
@@ -850,7 +902,7 @@ function actualizarHistorico() {
         if (esNoShow) noShows++;
         var rowClass = esNoShow ? ' style="background:#fee2e2;"' : '';
         var noShowTag = esNoShow ? ' <span style="background:#ef4444;color:white;padding:2px 6px;border-radius:4px;font-size:11px;">NO SHOW</span>' : '';
-        var masajistaInfo = c.masajista ? '<span style="background:#8b5cf6;color:white;padding:2px 6px;border-radius:4px;font-size:11px;"> ' + c.masajista + '</span>' : '';
+        var masajistaInfo = getMasajistaTag(c.masajista, '11px');
         html += '<tr' + rowClass + '><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + '</td><td>' + masajistaInfo + '</td><td>' + c.duracion + ' min</td><td>' + (c.precio ? c.precio.toFixed(2) + '€' : '-') + '</td><td>' + metodo + '</td><td>' + estado + noShowTag + '</td></tr>';
     });
     document.getElementById('tb-historico').innerHTML = html || '<tr><td colspan="9" style="text-align:center;">No hay citas en el histórico</td></tr>';
@@ -926,6 +978,7 @@ window.onload = function() {
     document.getElementById('t1').addEventListener('click', function(e) { if (!this.disabled && document.getElementById('d1').value && document.getElementById('masajista').value) abrirSelectorHoras(); });
     document.getElementById('modal-cobro').addEventListener('click', function(e) { if (e.target === this) cerrarModalCobro(); });
     document.getElementById('p1').addEventListener('input', function() { var btn = document.getElementById('btn-cita'); btn.disabled = !(this.value && parseFloat(this.value) > 0); btn.textContent = btn.disabled ? 'Introduce el precio' : 'Guardar Cita'; });
+    document.getElementById('esGratis').addEventListener('change', aplicarLogicaGratis);
     document.getElementById('d1').addEventListener('change', onFechaHoraChange);
     document.getElementById('masajista').addEventListener('change', onMasajistaChange);
     document.getElementById('b1').onclick = function() { cambiar(1); };
@@ -1100,8 +1153,6 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 .resumen-label { font-size: 14px; color: #64748b; margin-bottom: 8px; font-weight: bold; }
 .resumen-valor { font-size: 2.5rem; font-weight: bold; }
 .resumen-valor-small { font-size: 1.2rem; font-weight: bold; }
-.masajista-selector { display: flex; gap: 10px; margin: 10px 0; }
-.masajista-selector select { flex: 1; }
 .banner-instalacion {
     position: fixed;
     bottom: 0;
@@ -1181,7 +1232,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
             <p><strong>Importante:</strong> Instala la aplicación para que funcione como una app real, sin barra de navegador y sin riesgo de salir accidentalmente.</p>
         </div>
         <div class="botones-banner">
-            <button class="btn-instalar" onclick="instalarApp()">📲 Instalar Ahora</button>
+            <button class="btn-instalar" onclick="instalarApp()"> Instalar Ahora</button>
             <button class="btn-cerrar-banner" onclick="cerrarBannerInstalacion()">✕ Más tarde</button>
         </div>
     </div>
@@ -1206,11 +1257,11 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <button id="b2">📅 Agenda</button>
 <button id="b3">👥 Clientes</button>
 <button id="b4">💰 Caja</button>
-<button id="b6"> Histórico</button>
-<button id="b7">💵 Tarifas</button>
-<button id="btn-exportar" style="float:right;background:#059669;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">💾 Copia</button>
+<button id="b6">📜 Histórico</button>
+<button id="b7"> Tarifas</button>
+<button id="btn-exportar" style="float:right;background:#059669;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;"> Copia</button>
 <button id="btn-importar" style="float:right;background:#8b5cf6;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;"> Importar</button>
-<button id="btn-reset" style="float:right;background:#ef4444;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">️ Resetear</button>
+<button id="btn-reset" style="float:right;background:#ef4444;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">🗑️ Resetear</button>
 </div>
 <input type="file" id="input-importar" accept=".json" style="display:none;">
 
@@ -1269,7 +1320,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
         <div class="horario-leyenda-item"><div class="horario-leyenda-color libre"></div><span>Disponible</span></div>
         <div class="horario-leyenda-item"><div class="horario-leyenda-color seleccionado"></div><span>Seleccionado</span></div>
         <div class="horario-leyenda-item"><div class="horario-leyenda-color limpieza"></div><span>🧹 Limpieza</span></div>
-        <div class="horario-leyenda-item"><div class="horario-leyenda-color ocupado"></div><span> Ocupado</span></div>
+        <div class="horario-leyenda-item"><div class="horario-leyenda-color ocupado"></div><span>🔒 Ocupado</span></div>
     </div>
 </div>
 <div id="alerta-solapamiento" class="alerta-solapamiento">
@@ -1524,12 +1575,12 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 
 <div id="modal-cobro" class="modal-overlay">
     <div class="modal-content">
-        <h3>💰 Registrar Cobro</h3>
+        <h3> Registrar Cobro</h3>
         <div class="cliente-info" id="modal-cliente-info"></div>
         <div class="importe-grande" id="modal-importe">0€</div>
         <p style="text-align:center;color:#64748b;margin-bottom:10px;"><strong>Selecciona método de pago:</strong></p>
         <div class="metodos-pago">
-            <div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)"><span class="icono"></span><span class="nombre">Efectivo</span></div>
+            <div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)"><span class="icono">💵</span><span class="nombre">Efectivo</span></div>
             <div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)"><span class="icono">💳</span><span class="nombre">Tarjeta</span></div>
             <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)"><span class="icono">📱</span><span class="nombre">Bizum</span></div>
             <div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"><span class="icono">🏦</span><span class="nombre">Transferencia</span></div>
