@@ -155,7 +155,7 @@ function resetearBaseDatos() {
         if (codigo !== null) alert('❌ Código incorrecto. No se ha borrado nada.');
         return;
     }
-    var confirmacion = prompt(' ÚLTIMA CONFIRMACIÓN\n\nEscribe BORRAR para eliminar todos los datos permanentemente.');
+    var confirmacion = prompt('🔴 ÚLTIMA CONFIRMACIÓN\n\nEscribe BORRAR para eliminar todos los datos permanentemente.');
     if (confirmacion !== 'BORRAR') {
         if (confirmacion !== null) alert('❌ Cancelado. No se ha borrado nada.');
         return;
@@ -242,8 +242,8 @@ function mostrarVisualizadorHorarios(fecha) {
             slot.textContent = timeStr;
             slot.dataset.hora = timeStr;
             var estado = verificarEstadoHorario(fecha, timeStr, null);
-            if (estado === 'ocupado') { slot.classList.add('ocupado'); slot.title = '🔒 Ocupado'; }
-            else if (estado === 'limpieza') { slot.classList.add('limpieza'); slot.title = '🧹 Limpieza'; }
+            if (estado === 'ocupado') { slot.classList.add('ocupado'); slot.title = ' Ocupado'; }
+            else if (estado === 'limpieza') { slot.classList.add('limpieza'); slot.title = ' Limpieza'; }
             else { slot.classList.add('libre'); slot.title = '✅ Disponible'; slot.onclick = function() { seleccionarHoraDesdeVisualizador(this.dataset.hora); }; }
             if (timeStr === horaActual) slot.classList.add('seleccionado');
             grid.appendChild(slot);
@@ -821,7 +821,7 @@ function actualizarHistorico() {
     historicas.forEach(function(c) {
         var cobro = cobros.find(function(cb) { return cb.cliente === c.cliente && cb.concepto.includes(c.servicio) && cb.fecha === c.fecha; });
         var metodo = cobro ? cobro.metodo : '-';
-        var estado = c.cobrado ? '<span style="color:#10b981;font-weight:bold;">✓ Cobrado</span>' : '<span style="color:#ef4444;font-weight:bold;">✗ No cobrado</span>';
+        var estado = c.cobrado ? '<span style="color:#10b981;font-weight:bold;">✓ Cobrado</span>' : '<span style="color:#ef4444;font-weight:bold;"> No cobrado</span>';
         if (c.cobrado) totalHistorico += c.precio || 0;
         var partes = c.hora.split(':');
         var minCita = parseInt(partes[0]) * 60 + parseInt(partes[1]);
@@ -892,12 +892,6 @@ function actualizarGraficos() {
 
 function mostrarEstado(mensaje, duracion) { var el = document.getElementById('estado'); el.textContent = mensaje; el.classList.add('visible'); setTimeout(function() { el.classList.remove('visible'); }, duracion); }
 
-// Prevenir botón atrás del navegador
-window.addEventListener('popstate', function(event) {
-    history.pushState(null, null, window.location.href);
-});
-history.pushState(null, null, window.location.href);
-  
 window.onload = function() {
     actualizarReloj();
     setInterval(actualizarReloj, 1000);
@@ -1177,6 +1171,57 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
         width: 100%;
         justify-content: center;
     }
+    /* Tabla de clientes en móvil - formato tarjeta */
+    #tb2 tr {
+        display: block;
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        border: 1px solid #e5e7eb;
+    }
+    #tb2 tr td {
+        display: block;
+        padding: 6px 0 !important;
+        border: none !important;
+        text-align: left !important;
+        font-size: 15px !important;
+    }
+    #tb2 tr td:first-child {
+        font-size: 17px !important;
+        font-weight: bold;
+        color: #0d9488;
+        margin-bottom: 5px;
+    }
+    #tb2 tr td:nth-child(2) {
+        color: #64748b;
+    }
+    #tb2 tr td:nth-child(3) {
+        color: #64748b;
+    }
+    #tb2 tr td:nth-child(4) {
+        font-weight: bold;
+        color: #0d9488;
+        font-size: 16px !important;
+    }
+    #tb2 tr td:last-child {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+    #tb2 tr td:last-child button {
+        flex: 1;
+        min-width: 80px;
+        padding: 10px 12px !important;
+        font-size: 14px !important;
+        text-align: center;
+    }
+    /* Ocultar cabecera de tabla en móvil */
+    #tb2 thead {
+        display: none;
+    }
 }
 @media (max-width: 479px) { 
     .header { padding: 5px; } 
@@ -1218,12 +1263,12 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 
 <div class="nav">
 <button id="b1" class="active">📊 Resumen</button>
-<button id="b2">📅 Agenda</button>
+<button id="b2"> Agenda</button>
 <button id="b3">👥 Clientes</button>
 <button id="b4">💰 Caja</button>
 <button id="b6">📜 Histórico</button>
 <button id="b7">💵 Tarifas</button>
-<button id="btn-exportar" style="float:right;background:#059669;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">💾 Copia</button>
+<button id="btn-exportar" style="float:right;background:#059669;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;"> Copia</button>
 <button id="btn-importar" style="float:right;background:#8b5cf6;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">📥 Importar</button>
 <button id="btn-reset" style="float:right;background:#ef4444;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">🗑️ Resetear</button>
 </div>
@@ -1276,7 +1321,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
         <div class="horario-leyenda-item"><div class="horario-leyenda-color libre"></div><span>Disponible</span></div>
         <div class="horario-leyenda-item"><div class="horario-leyenda-color seleccionado"></div><span>Seleccionado</span></div>
         <div class="horario-leyenda-item"><div class="horario-leyenda-color limpieza"></div><span>🧹 Limpieza</span></div>
-        <div class="horario-leyenda-item"><div class="horario-leyenda-color ocupado"></div><span> Ocupado</span></div>
+        <div class="horario-leyenda-item"><div class="horario-leyenda-color ocupado"></div><span>🔒 Ocupado</span></div>
     </div>
 </div>
 <div id="alerta-solapamiento" class="alerta-solapamiento">
@@ -1354,7 +1399,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </form>
 </div>
 <div id="ficha-fidelidad" class="card" style="display:none;">
-    <h3> Programa de Fidelización</h3>
+    <h3>🎁 Programa de Fidelización</h3>
     <div id="contenido-fidelidad"></div>
 </div>
 <div class="card">
@@ -1414,7 +1459,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div class="grafico-container"><canvas id="graficoMetodos"></canvas></div>
 </div>
 <div class="card">
-<h3> Listado de Masajes Realizados</h3>
+<h3>📋 Listado de Masajes Realizados</h3>
 <div class="busqueda-rapida">
     <input type="text" id="busqueda-masajes" placeholder="🔍 Buscar en el listado..." oninput="actualizarListadoMasajes()">
 </div>
@@ -1448,7 +1493,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </div>
 
 <div id="s6" class="section">
-<h2> Histórico de Citas</h2>
+<h2>📜 Histórico de Citas</h2>
 <div class="stats-historico">
     <div class="stat-hist"><h4>Total citas pasadas</h4><div class="valor" id="hist-contador">0</div></div>
     <div class="stat-hist"><h4>Total cobrado</h4><div class="valor" id="hist-total">0€</div></div>
@@ -1520,7 +1565,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <td><div class="input-con-euro"><input type="number" id="precio_rtp_120" step="1" min="0" onchange="guardarTarifas()"></div></td></tr>
 </tbody>
 </table>
-<button class="btn" onclick="cargarTarifasPorDefecto()" style="background:#6b7280; margin-top:20px;"> Restaurar precios por defecto</button>
+<button class="btn" onclick="cargarTarifasPorDefecto()" style="background:#6b7280; margin-top:20px;">🔄 Restaurar precios por defecto</button>
 </div>
 </div>
 </div>
@@ -1535,8 +1580,8 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
         <p style="text-align:center;color:#64748b;margin-bottom:10px;"><strong>Selecciona método de pago:</strong></p>
         <div class="metodos-pago">
             <div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)"><span class="icono">💵</span><span class="nombre">Efectivo</span></div>
-            <div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)"><span class="icono"></span><span class="nombre">Tarjeta</span></div>
-            <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)"><span class="icono"></span><span class="nombre">Bizum</span></div>
+            <div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)"><span class="icono">💳</span><span class="nombre">Tarjeta</span></div>
+            <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)"><span class="icono">📱</span><span class="nombre">Bizum</span></div>
             <div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"><span class="icono">🏦</span><span class="nombre">Transferencia</span></div>
         </div>
         <div class="modal-botones">
