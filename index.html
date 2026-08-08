@@ -68,6 +68,7 @@ function iniciarSincronizacion() {
         actualizar();
         actualizarListadoMasajes();
         actualizarHistorico();
+        // Actualizar el buscador de clientes
         actualizarBuscadorClientes();
     });
     db.collection('citas').onSnapshot(snapshot => {
@@ -154,11 +155,11 @@ function resetearBaseDatos() {
     if (!confirm('⚠️ ATENCIÓN: Vas a borrar datos de la base de datos.\n\n¿Deseas continuar con el proceso de selección?')) {
         return;
     }
-    var borrarClientes = confirm('¿Borrar TODOS los CLIENTES?\n\n⚠️ Esto eliminará nombres, teléfonos, emails y puntos de fidelidad.\n\n(Acepta = SÍ borra clientes | Cancela = NO borra clientes)');
-    var borrarCitas = confirm('¿Borrar TODAS las CITAS?\n\n️ Esto eliminará el historial de citas pasadas y futuras.\n\n(Acepta = SÍ borra citas | Cancela = NO borra citas)');
+    var borrarClientes = confirm('¿Borrar TODOS los CLIENTES?\n\n️ Esto eliminará nombres, teléfonos, emails y puntos de fidelidad.\n\n(Acepta = SÍ borra clientes | Cancela = NO borra clientes)');
+    var borrarCitas = confirm('¿Borrar TODAS las CITAS?\n\n⚠️ Esto eliminará el historial de citas pasadas y futuras.\n\n(Acepta = SÍ borra citas | Cancela = NO borra citas)');
     var borrarCobros = confirm('¿Borrar TODOS los COBROS?\n\n⚠️ Esto eliminará el historial de pagos y movimientos de caja.\n\n(Acepta = SÍ borra cobros | Cancela = NO borra cobros)');
     if (!borrarClientes && !borrarCitas && !borrarCobros) {
-        alert(' No has seleccionado nada para borrar. Operación cancelada.');
+        alert('❌ No has seleccionado nada para borrar. Operación cancelada.');
         return;
     }
     var resumen = '📋 RESUMEN DE LO QUE SE BORRARÁ:\n\n';
@@ -167,7 +168,7 @@ function resetearBaseDatos() {
     if (borrarCitas) resumen += '✅ Citas: ' + citas.length + ' registros\n';
     else resumen += '❌ Citas: SE MANTIENEN (' + citas.length + ' registros)\n';
     if (borrarCobros) resumen += '✅ Cobros: ' + cobros.length + ' registros\n';
-    else resumen += ' Cobros: SE MANTIENEN (' + cobros.length + ' registros)\n';
+    else resumen += '❌ Cobros: SE MANTIENEN (' + cobros.length + ' registros)\n';
     resumen += '\nLas TARIFAS siempre se mantienen.\n\n';
     resumen += '⚠️ ¿CONFIRMAS ESTA OPERACIÓN?';
     if (!confirm(resumen)) {
@@ -191,7 +192,7 @@ function resetearBaseDatos() {
         else msg += '✔️ ' + contadores.clientes + ' clientes mantenidos\n';
         if (borrarCitas) msg += '🗑️ ' + contadores.citas + ' citas borradas\n';
         else msg += '✔️ ' + contadores.citas + ' citas mantenidas\n';
-        if (borrarCobros) msg += '🗑️ ' + contadores.cobros + ' cobros borrados\n';
+        if (borrarCobros) msg += '️ ' + contadores.cobros + ' cobros borrados\n';
         else msg += '✔️ ' + contadores.cobros + ' cobros mantenidos\n';
         msg += '\nLa página se recargará en 2 segundos.';
         alert(msg);
@@ -333,23 +334,23 @@ function onFechaHoraChange() {
     var fecha = document.getElementById('d1').value;
     var masajista = document.getElementById('masajista').value;
     var hora = document.getElementById('t1').value;
-    var selectCliente = document.getElementById('c1');
+    var inputCliente = document.getElementById('c1');
     if (fecha && masajista) mostrarVisualizadorHorarios(fecha, masajista);
     else document.getElementById('visualizador-horarios').style.display = 'none';
     if (fecha && masajista && hora) {
         if (verificarSolapamiento(fecha, hora, null, masajista, null)) {
             document.getElementById('mensaje-solapamiento').textContent = 'Ya existe una cita para ' + masajista + ' a esa hora';
             document.getElementById('alerta-solapamiento').classList.add('visible');
-            selectCliente.disabled = true;
+            inputCliente.disabled = true;
             return;
         }
         document.getElementById('alerta-solapamiento').classList.remove('visible');
-        selectCliente.disabled = false;
-        selectCliente.value = '';
-        selectCliente.focus();
+        inputCliente.disabled = false;
+        inputCliente.value = '';
+        inputCliente.focus();
     } else {
-        selectCliente.disabled = true;
-        selectCliente.value = '';
+        inputCliente.disabled = true;
+        inputCliente.value = '';
         document.getElementById('sv1').disabled = true;
         document.getElementById('sv1').value = '';
         resetearDesdeDuracion();
@@ -515,7 +516,7 @@ function mostrarFichaFidelidad(clienteId) {
     html += '<input type="number" id="edit-puntos" value="' + puntos + '" step="0.5" min="0" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:16px;">';
     html += '</div>';
     html += '<button class="btn-regalo" onclick="guardarPuntosEditados(\'' + clienteId + '\')" style="width:100%;padding:12px;font-size:16px;">💾 Guardar cambios</button>';
-    html += '<button onclick="ocultarEditorFidelidad()" style="width:100%;padding:10px;margin-top:8px;background:#6b7280;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;"> Cancelar</button>';
+    html += '<button onclick="ocultarEditorFidelidad()" style="width:100%;padding:10px;margin-top:8px;background:#6b7280;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">✕ Cancelar</button>';
     html += '</div>';
     document.getElementById('contenido-fidelidad').innerHTML = html;
     document.getElementById('ficha-fidelidad').style.display = 'block';
@@ -533,7 +534,7 @@ function guardarPuntosEditados(clienteId) {
     var inputPuntos = document.getElementById('edit-puntos');
     if (!inputPuntos) { alert('❌ Error: No se encuentra el campo de puntos'); return; }
     var nuevosPuntos = parseFloat(inputPuntos.value);
-    if (isNaN(nuevosPuntos) || nuevosPuntos < 0) { alert(' Los puntos deben ser un número válido mayor o igual a 0'); return; }
+    if (isNaN(nuevosPuntos) || nuevosPuntos < 0) { alert('❌ Los puntos deben ser un número válido mayor o igual a 0'); return; }
     var mensaje = '¿Guardar los nuevos valores?\n\nPuntos: ' + nuevosPuntos.toFixed(1);
     if (nuevosPuntos >= 10) mensaje += '\n\n⚠️ El cliente tendrá 1 MASAJE GRATIS disponible';
     if (confirm(mensaje)) {
@@ -615,9 +616,9 @@ function guardarCita(e) {
     cancelarEdicionCita();
 }
 
-function eliminarCliente(id) { if(confirm('¿Eliminar?')) { db.collection('clientes').doc(id).delete(); mostrarEstado('️ Eliminado', 2000); } }
-function eliminarCita(id) { if(confirm('¿Eliminar?')) { db.collection('citas').doc(id).delete(); mostrarEstado('️ Eliminado', 2000); } }
-function eliminarCobro(id) { if(confirm('¿Eliminar?')) { db.collection('cobros').doc(id).delete(); mostrarEstado('️ Eliminado', 2000); } }
+function eliminarCliente(id) { if(confirm('¿Eliminar?')) { db.collection('clientes').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
+function eliminarCita(id) { if(confirm('¿Eliminar?')) { db.collection('citas').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
+function eliminarCobro(id) { if(confirm('¿Eliminar?')) { db.collection('cobros').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
 
 function editarCliente(id) {
     var c = clientes.find(function(x) { return x.id === id; });
@@ -704,7 +705,7 @@ function actualizar() {
     var html2 = '';
     var sorted = citas.slice().sort(function(a, b) { return new Date(a.fecha + 'T' + a.hora) - new Date(b.fecha + 'T' + b.hora); });
     sorted.forEach(function(c) {
-        var estado = c.cobrado ? '<span style="background:#d1fae5;color:#065f46;padding:4px 8px;border-radius:4px;">✓ Cobrado</span>' : '<span style="background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:4px;"> Pendiente</span>';
+        var estado = c.cobrado ? '<span style="background:#d1fae5;color:#065f46;padding:4px 8px;border-radius:4px;">✓ Cobrado</span>' : '<span style="background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:4px;">⏳ Pendiente</span>';
         var btnCobrar = c.cobrado ? '' : '<button class="btn-cobrar" onclick="cobrarCita(\'' + c.id + '\')">Cobrar</button>';
         var gratisTag = c.esGratis ? ' <span style="background:#f59e0b;color:white;padding:2px 6px;border-radius:4px;">GRATIS</span>' : '';
         var masajistaTag = getMasajistaTag(c.masajista, '12px');
@@ -728,7 +729,7 @@ function actualizar() {
             var minCita = parseInt(partes[0]) * 60 + parseInt(partes[1]);
             var esNoShow = (minCita + TIEMPO_NOSHOW) <= ahoraMin;
             var estilo = esNoShow ? 'background:#fee2e2;border-left:4px solid #ef4444;color:#991b1b;' : 'background:#f9fafb;';
-            var etiqueta = esNoShow ? ' <span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold;"> NO SHOW</span>' : '';
+            var etiqueta = esNoShow ? ' <span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold;">❌ NO SHOW</span>' : '';
             var masajistaInfo = getMasajistaTag(c.masajista, '11px');
             hd += '<div style="padding:12px;margin:8px 0;border-radius:6px;' + estilo + '"><strong>' + c.cliente + '</strong> - ' + c.servicio + ' (' + c.hora + ') ' + masajistaInfo + etiqueta + '</div>';
         });
@@ -1014,7 +1015,7 @@ window.onload = function() {
             document.getElementById('cb1').valueAsDate = new Date();
             mostrarEstado('✅ Cobro registrado', 2000);
         }).catch(function(err) {
-            alert('❌ Error al registrar cobro: ' + err.message);
+            alert(' Error al registrar cobro: ' + err.message);
         });
     };
     document.getElementById('t1').addEventListener('click', function(e) { if (!this.disabled && document.getElementById('d1').value && document.getElementById('masajista').value) abrirSelectorHoras(); });
@@ -1274,7 +1275,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
             <p><strong>Importante:</strong> Instala la aplicación para que funcione como una app real, sin barra de navegador y sin riesgo de salir accidentalmente.</p>
         </div>
         <div class="botones-banner">
-            <button class="btn-instalar" onclick="instalarApp()"> Instalar Ahora</button>
+            <button class="btn-instalar" onclick="instalarApp()">📲 Instalar Ahora</button>
             <button class="btn-cerrar-banner" onclick="cerrarBannerInstalacion()">✕ Más tarde</button>
         </div>
     </div>
@@ -1297,7 +1298,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div class="nav">
 <button id="b1" class="active">📊 Resumen</button>
 <button id="b2">📅 Agenda</button>
-<button id="b3"> Clientes</button>
+<button id="b3">👥 Clientes</button>
 <button id="b4">💰 Caja</button>
 <button id="b6">📜 Histórico</button>
 <button id="b7">💵 Tarifas</button>
@@ -1343,16 +1344,16 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <h3>Nueva Cita</h3>
 <form id="f1">
 <input type="date" id="d1" required onchange="onFechaHoraChange()">
-<label><strong>👤 Masajista:</strong></label>
+<label><strong> Masajista:</strong></label>
 <select id="masajista" required onchange="onMasajistaChange()" style="background:#f0fdfa;font-weight:bold;">
     <option value="">Selecciona masajista...</option>
     <option value="Luz" selected>Luz (Dueña)</option>
     <option value="Laura">Laura</option>
 </select>
-<input type="text" id="t1" readonly placeholder="👇 Primero selecciona fecha y masajista" 
+<input type="text" id="t1" readonly placeholder=" Primero selecciona fecha y masajista" 
        style="cursor: pointer; background-color: #f0fdfa; text-align: center; font-weight: bold;" 
        onclick="abrirSelectorHoras()">
-<p class="hora-hint"> Cada masajista tiene su propia disponibilidad. Las dos pueden atender a la misma hora.</p>
+<p class="hora-hint">💡 Cada masajista tiene su propia disponibilidad. Las dos pueden atender a la misma hora.</p>
 <div id="visualizador-horarios" class="horario-visualizador" style="display:none;">
     <h4>📅 Horarios disponibles para <span id="fecha-seleccionada"></span></h4>
     <div class="horario-grid" id="horario-grid"></div>
@@ -1423,7 +1424,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div id="s3" class="section">
 <h2>Clientes</h2>
 <div class="busqueda-container">
-    <label>🔍 Buscar:</label>
+    <label> Buscar:</label>
     <input type="text" id="busqueda-clientes" placeholder="Escribe nombre, apellido o teléfono..." oninput="filtrarClientes()">
     <span class="contador-resultados" id="contador-resultados"></span>
 </div>
@@ -1612,7 +1613,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </div>
 </div>
 
-<div id="estado" class="estado-guardado"> Guardado en la nube</div>
+<div id="estado" class="estado-guardado">💾 Guardado en la nube</div>
 
 <div id="modal-cobro" class="modal-overlay">
     <div class="modal-content">
