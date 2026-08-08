@@ -186,7 +186,7 @@ function resetearBaseDatos() {
     }
     batch.commit().then(function() {
         var msg = '✅ Base de datos actualizada:\n\n';
-        if (borrarClientes) msg += '️ ' + contadores.clientes + ' clientes borrados\n';
+        if (borrarClientes) msg += '🗑️ ' + contadores.clientes + ' clientes borrados\n';
         else msg += '✔️ ' + contadores.clientes + ' clientes mantenidos\n';
         if (borrarCitas) msg += '🗑️ ' + contadores.citas + ' citas borradas\n';
         else msg += '✔️ ' + contadores.citas + ' citas mantenidas\n';
@@ -273,7 +273,7 @@ function mostrarVisualizadorHorarios(fecha, masajista) {
             slot.dataset.hora = timeStr;
             var estado = verificarEstadoHorario(fecha, timeStr, masajista, null);
             if (estado === 'ocupado') { slot.classList.add('ocupado'); slot.title = '🔒 Ocupado'; }
-            else if (estado === 'limpieza') { slot.classList.add('limpieza'); slot.title = ' Limpieza'; }
+            else if (estado === 'limpieza') { slot.classList.add('limpieza'); slot.title = '🧹 Limpieza'; }
             else { slot.classList.add('libre'); slot.title = '✅ Disponible'; slot.onclick = function() { seleccionarHoraDesdeVisualizador(this.dataset.hora); }; }
             if (timeStr === horaActual) slot.classList.add('seleccionado');
             grid.appendChild(slot);
@@ -476,7 +476,7 @@ function mostrarInfoFidelidad(clienteNombre) {
     var tieneDerecho = puntos >= 10;
     var html = '<div class="alerta-regalo"><div class="icono">F</div><div class="texto"><strong>' + cliente.nombre + '</strong><br>Puntos: <strong>' + puntos.toFixed(1) + '</strong><br>';
     if (tieneDerecho) {
-        html += '<span style="color:#f59e0b;font-weight:bold;"> ¡TIENE 1 MASAJE GRATIS DISPONIBLE!</span>';
+        html += '<span style="color:#f59e0b;font-weight:bold;">🎉 ¡TIENE 1 MASAJE GRATIS DISPONIBLE!</span>';
     } else {
         html += 'Faltan <strong>' + restantes.toFixed(1) + ' puntos</strong> para el siguiente gratis';
         html += '<div class="progress-bar"><div class="fill" style="width:' + ((puntos % 10) * 10) + '%"></div></div>';
@@ -605,7 +605,7 @@ function guardarCita(e) {
                     var nuevosPuntos = (cliente.puntosFidelidad || 0) + puntos;
                     db.collection('clientes').doc(cliente.id).update({puntosFidelidad: nuevosPuntos});
                     if (nuevosPuntos >= 10 && (nuevosPuntos - puntos) < 10) {
-                        setTimeout(function() { alert('🎉 ¡' + cliente.nombre + ' ha alcanzado los 10 puntos!\n\nTIENE 1 MASAJE GRATIS DISPONIBLE'); }, 500);
+                        setTimeout(function() { alert(' ¡' + cliente.nombre + ' ha alcanzado los 10 puntos!\n\nTIENE 1 MASAJE GRATIS DISPONIBLE'); }, 500);
                     }
                     mostrarEstado('✅ Cita guardada - +' + puntos + ' puntos', 2000);
                 }
@@ -619,7 +619,7 @@ function guardarCita(e) {
 
 function eliminarCliente(id) { if(confirm('¿Eliminar?')) { db.collection('clientes').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
 function eliminarCita(id) { if(confirm('¿Eliminar?')) { db.collection('citas').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
-function eliminarCobro(id) { if(confirm('¿Eliminar?')) { db.collection('cobros').doc(id).delete(); mostrarEstado('️ Eliminado', 2000); } }
+function eliminarCobro(id) { if(confirm('¿Eliminar?')) { db.collection('cobros').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
 
 function editarCliente(id) {
     var c = clientes.find(function(x) { return x.id === id; });
@@ -730,7 +730,7 @@ function actualizar() {
             var minCita = parseInt(partes[0]) * 60 + parseInt(partes[1]);
             var esNoShow = (minCita + TIEMPO_NOSHOW) <= ahoraMin;
             var estilo = esNoShow ? 'background:#fee2e2;border-left:4px solid #ef4444;color:#991b1b;' : 'background:#f9fafb;';
-            var etiqueta = esNoShow ? ' <span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold;">❌ NO SHOW</span>' : '';
+            var etiqueta = esNoShow ? ' <span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold;"> NO SHOW</span>' : '';
             var masajistaInfo = getMasajistaTag(c.masajista, '11px');
             hd += '<div style="padding:12px;margin:8px 0;border-radius:6px;' + estilo + '"><strong>' + c.cliente + '</strong> - ' + c.servicio + ' (' + c.hora + ') ' + masajistaInfo + etiqueta + '</div>';
         });
@@ -1000,9 +1000,7 @@ window.onload = function() {
             concepto: conceptoCobro, 
             notas: notasCobro 
         }).then(function() {
-            // ✅ Actualizar caja inmediatamente
             actualizarCaja();
-            // Limpiar formulario
             document.getElementById('f3').reset();
             document.getElementById('cb1').valueAsDate = new Date();
             mostrarEstado('✅ Cobro registrado', 2000);
@@ -1290,11 +1288,11 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <div class="nav">
 <button id="b1" class="active">📊 Resumen</button>
 <button id="b2">📅 Agenda</button>
-<button id="b3">👥 Clientes</button>
+<button id="b3"> Clientes</button>
 <button id="b4">💰 Caja</button>
 <button id="b6">📜 Histórico</button>
 <button id="b7">💵 Tarifas</button>
-<button id="btn-exportar" style="float:right;background:#059669;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">💾 Copia</button>
+<button id="btn-exportar" style="float:right;background:#059669;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;"> Copia</button>
 <button id="btn-importar" style="float:right;background:#8b5cf6;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">📥 Importar</button>
 <button id="btn-reset" style="float:right;background:#ef4444;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">🗑️ Resetear</button>
 </div>
@@ -1347,7 +1345,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
        onclick="abrirSelectorHoras()">
 <p class="hora-hint">💡 Cada masajista tiene su propia disponibilidad. Las dos pueden atender a la misma hora.</p>
 <div id="visualizador-horarios" class="horario-visualizador" style="display:none;">
-    <h4> Horarios disponibles para <span id="fecha-seleccionada"></span></h4>
+    <h4>📅 Horarios disponibles para <span id="fecha-seleccionada"></span></h4>
     <div class="horario-grid" id="horario-grid"></div>
     <div class="horario-leyenda">
         <div class="horario-leyenda-item"><div class="horario-leyenda-color libre"></div><span>Disponible</span></div>
@@ -1471,7 +1469,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 </form>
 </div>
 <div class="card">
-<h3>📈 Gráficos de Ingresos</h3>
+<h3> Gráficos de Ingresos</h3>
 <div class="filtros-grafico">
 <label><strong>Período:</strong></label>
 <select id="grafico-periodo" onchange="cambiarGrafico()">
@@ -1551,7 +1549,7 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
         </select></div>
     </div>
     <div class="busqueda-rapida">
-        <input type="text" id="hist-busqueda" placeholder=" Buscar en el histórico...">
+        <input type="text" id="hist-busqueda" placeholder="🔍 Buscar en el histórico...">
     </div>
 </div>
 <div class="card">
