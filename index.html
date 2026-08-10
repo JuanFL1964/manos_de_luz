@@ -36,8 +36,8 @@ var graficoIngresos = null;
 var graficoMetodos = null;
 var deferredPrompt = null;
 
-var MASAJISTAS = ['Luz', 'Laura'];
-var COLORES_MASAJISTAS = { 'Luz': '#ef4444', 'Laura': '#8b5cf6' };
+var MASAJISTAS = ['Camilla1', 'Camilla2'];
+var COLORES_MASAJISTAS = { 'Camilla1': '#ef4444', 'Camilla2': '#8b5cf6' };
 
 var tarifasPorDefecto = {
     'relajante_60': 50, 'relajante_90': 75, 'relajante_120': 100,
@@ -651,7 +651,7 @@ function editarCita(id) {
     if (!c) return;
     editandoCita = id;
     document.getElementById('d1').value = c.fecha;
-    document.getElementById('masajista').value = c.masajista || 'Luz';
+    document.getElementById('masajista').value = c.masajista || 'Camilla1';
     document.getElementById('t1').value = c.hora;
     document.getElementById('c1').value = c.cliente;
     document.getElementById('sv1').value = c.servicio;
@@ -675,7 +675,7 @@ function editarCita(id) {
     document.getElementById('card-cita').classList.add('editando');
     calcularYMostrarPrecio();
     aplicarLogicaGratis();
-    mostrarVisualizadorHorarios(c.fecha, c.masajista || 'Luz');
+    mostrarVisualizadorHorarios(c.fecha, c.masajista || 'Camilla1');
 }
 
 function cancelarEdicionCliente() { 
@@ -690,7 +690,7 @@ function cancelarEdicionCita() {
     editandoCita = null; 
     document.getElementById('f1').reset(); 
     document.getElementById('d1').valueAsDate = new Date(); 
-    document.getElementById('masajista').value = 'Luz';
+    document.getElementById('masajista').value = 'Camilla1';
     document.querySelector('input[name="duracion"][value="60"]').checked = true; 
     document.getElementById('info-precio').style.display = 'none'; 
     document.getElementById('aviso-fidelidad').style.display = 'none'; 
@@ -1360,8 +1360,8 @@ button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
 <label><strong>👤 Masajista:</strong></label>
 <select id="masajista" required onchange="onMasajistaChange()" style="background:#f0fdfa;font-weight:bold;">
     <option value="">Selecciona masajista...</option>
-    <option value="Luz" selected>Luz (Dueña)</option>
-    <option value="Laura">Laura</option>
+    <option value="Camilla1" selected>Camilla1</option>
+    <option value="Camilla2">Camilla2</option>
 </select>
 <input type="text" id="t1" readonly placeholder="👇 Primero selecciona fecha y masajista" 
        style="cursor: pointer; background-color: #f0fdfa; text-align: center; font-weight: bold;" 
