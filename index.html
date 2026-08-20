@@ -712,7 +712,7 @@ function actualizar() {
     var totalCobrosHoy = 0; cobrosHoy.forEach(function(c) { totalCobrosHoy += c.importe; });
     document.getElementById('n4').textContent = totalCobrosHoy.toFixed(2) + '€';
     var html2 = '';
-    var sorted = citas.slice().sort(function(a, b) { return new Date(a.fecha + 'T' + a.hora) - new Date(b.fecha + 'T' + b.hora); });
+    var sorted = citas.slice().sort(function(a, b) { return new Date(b.fecha + 'T' + b.hora) - new Date(a.fecha + 'T' + a.hora); });
     sorted.forEach(function(c) {
         var estado = c.cobrado ? '<span style="background:#d1fae5;color:#065f46;padding:4px 8px;border-radius:4px;">✓ Cobrado</span>' : '<span style="background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:4px;">⏳ Pendiente</span>';
         
