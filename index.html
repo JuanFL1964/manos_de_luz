@@ -799,7 +799,16 @@ function editarCliente(id) {
     document.getElementById('btn-cancelar-cliente').style.display = 'inline-block';
     document.getElementById('card-cliente').classList.add('editando');
     mostrarFichaFidelidad(id);
+    
+    // 👇 SCROLL SUAVE HASTA EL FORMULARIO
     document.getElementById('card-cliente').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
+    // 👇 NUEVO: Ajuste adicional para que no lo tape el header
+    setTimeout(function() {
+        window.scrollBy({ top: -100, behavior: 'smooth' });
+    }, 600);
+    
+    // 👇 ESTE SE QUEDA IGUAL (resaltado visual)
     setTimeout(function() {
         document.getElementById('card-cliente').classList.add('formulario-editando');
         setTimeout(function() {
