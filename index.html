@@ -114,7 +114,7 @@ tr.gratis { background: #fef3c7; }
 #banner-instalacion button { background: white; color: #0d9488; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; margin: 5px; cursor: pointer; }
 .grafico-container { position: relative; height: 400px; margin-top: 15px; }
 .grafico-container-pequeno { position: relative; height: 300px; margin-top: 15px; }
-.filtros-container { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+.filtros-container { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: flex-end; }
 .filtros-container select, .filtros-container input { padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; }
 #busqueda-clientes { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; margin-bottom: 10px; }
 #contador-resultados { font-size: 0.85rem; color: #64748b; margin-bottom: 10px; }
@@ -211,6 +211,7 @@ function iniciarSincronizacion() {
         actualizarCaja();
         actualizarGraficos();
         actualizar();
+        actualizarCajaDetallada();
     });
     db.collection('auditoria').onSnapshot(snapshot => {
         auditoria = [];
@@ -245,6 +246,7 @@ function cambiar(n) {
     if(n === 6) actualizarHistorico();
     if(n === 8) actualizarTablaAuditoria();
     if(n === 5) cargarTarifasEnFormulario();
+    if(n === 4) { inicializarFiltrosCaja(); actualizarCajaDetallada(); }
 }
 function mostrarBannerInstalacion() {
     var primeraVez = localStorage.getItem('primeraVisita');
@@ -283,7 +285,7 @@ function resetearBaseDatos() {
     var confirmarInicio = confirm('⚠️ ATENCIÓN: Vas a borrar datos de la base de datos.\n\n¿Deseas continuar con el proceso de selección?\n\n(SÍ = Continuar | NO = Cancelar)');
     if (!confirmarInicio) return;
     var borrarClientes = confirm('¿Borrar TODOS los CLIENTES?\n\n⚠️ Esto eliminará nombres, teléfonos, emails y puntos de fidelidad.\n\n(SÍ = Borrar clientes | NO = Mantener clientes)');
-    var borrarCitas = confirm('¿Borrar TODAS las CITAS?\n\n⚠️ Esto eliminará el historial de citas pasadas y futuras.\n\n(SÍ = Borrar citas | NO = Mantener citas)');
+    var borrarCitas = confirm('¿Borrar TODAS las CITAS?\n\n️ Esto eliminará el historial de citas pasadas y futuras.\n\n(SÍ = Borrar citas | NO = Mantener citas)');
     var borrarCobros = confirm('¿Borrar TODOS los COBROS?\n\n⚠️ Esto eliminará el historial de pagos y movimientos de caja.\n\n(SÍ = Borrar cobros | NO = Mantener cobros)');
     if (!borrarClientes && !borrarCitas && !borrarCobros) { alert('No has seleccionado nada para borrar. Operación cancelada.'); return; }
     var resumen = '📋 RESUMEN DE LO QUE SE BORRARÁ:\n\n';
@@ -292,10 +294,10 @@ function resetearBaseDatos() {
     if (borrarCitas) resumen += '✅ Citas: ' + citas.length + ' registros\n';
     else resumen += '❌ Citas: SE MANTIENEN (' + citas.length + ' registros)\n';
     if (borrarCobros) resumen += '✅ Cobros: ' + cobros.length + ' registros\n';
-    else resumen += '❌ Cobros: SE MANTIENEN (' + cobros.length + ' registros)\n';
+    else resumen += ' Cobros: SE MANTIENEN (' + cobros.length + ' registros)\n';
     resumen += '\nLas TARIFAS siempre se mantienen.\n\n⚠️ ¿CONFIRMAR BORRADO?\n\n(SÍ = Borrar | NO = Cancelar)';
     var confirmarFinal = confirm(resumen);
-    if (!confirmarFinal) { alert('❌ Operación cancelada. No se ha borrado nada.'); return; }
+    if (!confirmarFinal) { alert(' Operación cancelada. No se ha borrado nada.'); return; }
     var batch = db.batch();
     var contadores = { clientes: 0, citas: 0, cobros: 0 };
     if (borrarClientes) { clientes.forEach(function(c) { batch.delete(db.collection('clientes').doc(c.id)); contadores.clientes++; }); }
@@ -305,20 +307,20 @@ function resetearBaseDatos() {
         var msg = '✅ Base de datos actualizada:\n\n';
         if (borrarClientes) msg += '🗑️ ' + contadores.clientes + ' clientes borrados\n';
         else msg += '✔️ ' + contadores.clientes + ' clientes mantenidos\n';
-        if (borrarCitas) msg += '🗑️ ' + contadores.citas + ' citas borradas\n';
+        if (borrarCitas) msg += '️ ' + contadores.citas + ' citas borradas\n';
         else msg += '✔️ ' + contadores.citas + ' citas mantenidas\n';
         if (borrarCobros) msg += '🗑️ ' + contadores.cobros + ' cobros borrados\n';
         else msg += '✔️ ' + contadores.cobros + ' cobros mantenidos\n';
         msg += '\nLa página se recargará en 2 segundos.';
         alert(msg);
         setTimeout(function() { location.reload(); }, 2000);
-    }).catch(function(err) { alert('❌ Error al borrar: ' + err.message); });
+    }).catch(function(err) { alert(' Error al borrar: ' + err.message); });
 }
 function exportarDatos() {
     try {
         var d = { clientes: clientes, citas: citas, cobros: cobros, tarifas: tarifas, fecha: new Date().toISOString(), version: '2.0' };
         var jsonStr = JSON.stringify(d, null, 2);
-        if (jsonStr.length < 50) { alert('⚠️ No hay datos'); return; }
+        if (jsonStr.length < 50) { alert('️ No hay datos'); return; }
         var blob = new Blob([jsonStr], { type: 'application/json' });
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
@@ -595,7 +597,7 @@ function mostrarFichaFidelidad(clienteId) {
     html += '<div class="progress-bar" style="margin-top:15px;"><div class="fill ' + (tieneDerecho ? 'completo' : '') + '" style="width:' + (tieneDerecho ? 100 : (puntos % 10) * 10) + '%"></div></div>';
     if (tieneDerecho) {
         html += '<div style="margin-top:15px;padding:15px;background:#fef3c7;border-radius:8px;text-align:center;">';
-        html += '<strong style="color:#92400e;font-size:1.1rem;">🎉 ¡TIENE 1 MASAJE GRATIS DISPONIBLE!</strong>';
+        html += '<strong style="color:#92400e;font-size:1.1rem;"> ¡TIENE 1 MASAJE GRATIS DISPONIBLE!</strong>';
         html += '<p style="margin:10px 0 0 0;font-size:14px;color:#64748b;">Al agendar la cita, marca la casilla "Es masaje GRATIS" y los puntos se restarán 10 automáticamente.</p>';
         html += '</div>';
     } else {
@@ -611,7 +613,7 @@ function mostrarFichaFidelidad(clienteId) {
     html += '<input type="number" id="edit-puntos" value="' + puntos + '" step="0.5" min="0" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:16px;">';
     html += '</div>';
     html += '<button class="btn-regalo" onclick="guardarPuntosEditados(\'' + clienteId + '\')" style="width:100%;padding:12px;font-size:16px;">💾 Guardar cambios</button>';
-    html += '<button onclick="ocultarEditorFidelidad()" style="width:100%;padding:10px;margin-top:8px;background:#6b7280;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;"> Cancelar</button>';
+    html += '<button onclick="ocultarEditorFidelidad()" style="width:100%;padding:10px;margin-top:8px;background:#6b7280;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">✕ Cancelar</button>';
     html += '</div>';
     document.getElementById('contenido-fidelidad').innerHTML = html;
     document.getElementById('ficha-fidelidad').style.display = 'block';
@@ -630,7 +632,7 @@ function guardarPuntosEditados(clienteId) {
     var nuevosPuntos = parseFloat(inputPuntos.value);
     if (isNaN(nuevosPuntos) || nuevosPuntos < 0) { alert('Los puntos deben ser un número válido mayor o igual a 0'); return; }
     var mensaje = '¿Guardar los nuevos valores?\n\nPuntos: ' + nuevosPuntos.toFixed(1);
-    if (nuevosPuntos >= 10) mensaje += '\n\n⚠️ El cliente tendrá 1 MASAJE GRATIS disponible';
+    if (nuevosPuntos >= 10) mensaje += '\n\n️ El cliente tendrá 1 MASAJE GRATIS disponible';
     if (confirm(mensaje)) {
         db.collection('clientes').doc(clienteId).update({ puntosFidelidad: nuevosPuntos }).then(function() {
             alert('✅ Puntos actualizados correctamente');
@@ -662,7 +664,7 @@ function guardarCita(e) {
     var esGratis = document.getElementById('esGratis').checked;
     var clienteNombre = document.getElementById('c1').value;
     var puntos = getPuntosPorDuracion(duracion);
-    if (!masajista) { alert('⚠️ Selecciona una camilla'); return; }
+    if (!masajista) { alert('️ Selecciona una camilla'); return; }
     if (verificarSolapamiento(fecha, hora, parseInt(duracion), masajista, editandoCita)) { 
         alert('❌ Ya existe una cita para ' + masajista + ' a esa hora'); 
         return; 
@@ -721,7 +723,7 @@ function eliminarCita(id) {
     var cita = citas.find(function(c) { return c.id === id; });
     if (!cita) { alert('❌ No se encuentra la cita'); return; }
     var mensaje = '🚨 DANGER - ELIMINACIÓN DE CITA \n\n';
-    mensaje += '📋 DATOS DE LA CITA:\n';
+    mensaje += ' DATOS DE LA CITA:\n';
     mensaje += '• Cliente: ' + cita.cliente + '\n';
     mensaje += '• Fecha: ' + cita.fecha + '\n';
     mensaje += '• Hora: ' + cita.hora + '\n';
@@ -740,7 +742,7 @@ function eliminarCita(id) {
         mensaje += '• Si la eliminas, no quedará constancia del posible cobro\n';
         mensaje += '• Verifica si se cobró antes de eliminar\n\n';
     }
-    mensaje += '⚠️ ADVERTENCIA IMPORTANTE:\n';
+    mensaje += '️ ADVERTENCIA IMPORTANTE:\n';
     mensaje += '• Esta acción quedará REGISTRADA DE FORMA PERMANENTE\n';
     mensaje += '• No se podrá deshacer ni borrar el registro\n';
     mensaje += '• Se eliminará la cita pero quedará constancia en auditoría\n\n';
@@ -783,12 +785,12 @@ function eliminarCita(id) {
                     batch.commit().then(function() {
                         console.log('✅ Cobro(s) eliminado(s):', cobrosAEliminar.length);
                     }).catch(function(err) {
-                        console.log(' Error al eliminar cobro:', err);
+                        console.log('❌ Error al eliminar cobro:', err);
                     });
                 }
             }
             db.collection('citas').doc(id).delete().then(function() {
-                mostrarEstado('🗑️ Cita eliminada (registrada en auditoría)', 3000);
+                mostrarEstado('️ Cita eliminada (registrada en auditoría)', 3000);
                 console.log('✅ Cita eliminada. Registro de auditoría:', registroAuditoria);
             }).catch(function(err) {
                 alert('❌ Error al eliminar cita: ' + err.message);
@@ -813,7 +815,7 @@ function verificarPasswordCobro() {
         cerrarModalPassword();
         if (cobroEliminarPendiente) {
             db.collection('cobros').doc(cobroEliminarPendiente).delete();
-            mostrarEstado('🗑️ Cobro eliminado', 2000);
+            mostrarEstado('️ Cobro eliminado', 2000);
             cobroEliminarPendiente = null;
         }
     } else {
@@ -829,7 +831,7 @@ function verificarPasswordCobro() {
                 usuario: 'Usuario local',
                 timestamp: Date.now()
             });
-            alert('⚠️ 3 intentos fallidos. Acción registrada en auditoría.');
+            alert('️ 3 intentos fallidos. Acción registrada en auditoría.');
             cerrarModalPassword();
             intentosFallidos = 0;
         }
@@ -1035,10 +1037,10 @@ function enviarWhatsAppCliente(clienteId) {
 }
 function enviarWhatsAppCita(citaId) {
     var cita = citas.find(function(c) { return c.id === citaId; });
-    if (!cita) { alert('❌ No se encuentra la cita'); return; }
+    if (!cita) { alert(' No se encuentra la cita'); return; }
     var cliente = clientes.find(function(c) { return c.nombre === cita.cliente; });
     if (!cliente || !cliente.telefono) {
-        alert('⚠️ No se encuentra el telefono del cliente "' + cita.cliente + '"\n\nAñade un telefono en la ficha del cliente.');
+        alert('️ No se encuentra el telefono del cliente "' + cita.cliente + '"\n\nAñade un telefono en la ficha del cliente.');
         return;
     }
     var diasSemanaCorto = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
@@ -1323,6 +1325,155 @@ function actualizarTablaAuditoria() {
     document.getElementById('tb-auditoria').innerHTML = html;
     document.getElementById('contador-auditoria').textContent = auditoria.length + ' registros';
 }
+function inicializarFiltrosCaja() {
+    var hoy = new Date();
+    var anioActual = hoy.getFullYear();
+    var mesActual = hoy.getMonth();
+    var diaActual = hoy.toISOString().split('T')[0];
+    document.getElementById('filtro-caja-dia').value = diaActual;
+    document.getElementById('filtro-caja-mes').value = mesActual;
+    var selectAnio = document.getElementById('filtro-caja-anio');
+    if (selectAnio.options.length <= 1) {
+        selectAnio.innerHTML = '';
+        for (var i = anioActual; i >= anioActual - 5; i--) {
+            selectAnio.innerHTML += '<option value="' + i + '">' + i + '</option>';
+        }
+    }
+    selectAnio.value = anioActual;
+    document.getElementById('filtro-caja-desde').value = '';
+    document.getElementById('filtro-caja-hasta').value = '';
+    var selCliente = document.getElementById('filtro-caja-cliente');
+    if (selCliente.options.length <= 1) {
+        selCliente.innerHTML = '<option value="">Todos los clientes</option>';
+        clientes.forEach(function(c) { selCliente.innerHTML += '<option>' + c.nombre + '</option>'; });
+    }
+    cambiarFiltroCaja();
+}
+function cambiarFiltroCaja() {
+    var tipo = document.getElementById('filtro-caja-tipo').value;
+    document.getElementById('filtro-caja-dia').style.display = tipo === 'dia' ? 'inline-block' : 'none';
+    document.getElementById('filtro-caja-mes').style.display = tipo === 'mes' ? 'inline-block' : 'none';
+    document.getElementById('filtro-caja-anio').style.display = (tipo === 'mes' || tipo === 'anio') ? 'inline-block' : 'none';
+    document.getElementById('filtro-caja-desde').style.display = tipo === 'rango' ? 'inline-block' : 'none';
+    document.getElementById('filtro-caja-hasta').style.display = tipo === 'rango' ? 'inline-block' : 'none';
+}
+function aplicarFiltrosCaja() {
+    var tipo = document.getElementById('filtro-caja-tipo').value;
+    var metodo = document.getElementById('filtro-caja-metodo').value;
+    var cliente = document.getElementById('filtro-caja-cliente').value;
+    var cobrosFiltrados = cobros.slice();
+    if (tipo === 'dia') {
+        var dia = document.getElementById('filtro-caja-dia').value;
+        if (dia) cobrosFiltrados = cobrosFiltrados.filter(function(c) { return c.fecha === dia; });
+    } else if (tipo === 'mes') {
+        var mes = parseInt(document.getElementById('filtro-caja-mes').value);
+        var anio = parseInt(document.getElementById('filtro-caja-anio').value);
+        cobrosFiltrados = cobrosFiltrados.filter(function(c) {
+            var f = new Date(c.fecha);
+            return f.getFullYear() === anio && f.getMonth() === mes;
+        });
+    } else if (tipo === 'anio') {
+        var anio2 = parseInt(document.getElementById('filtro-caja-anio').value);
+        cobrosFiltrados = cobrosFiltrados.filter(function(c) { return new Date(c.fecha).getFullYear() === anio2; });
+    } else if (tipo === 'rango') {
+        var desde = document.getElementById('filtro-caja-desde').value;
+        var hasta = document.getElementById('filtro-caja-hasta').value;
+        if (desde) cobrosFiltrados = cobrosFiltrados.filter(function(c) { return c.fecha >= desde; });
+        if (hasta) cobrosFiltrados = cobrosFiltrados.filter(function(c) { return c.fecha <= hasta; });
+    }
+    if (metodo) cobrosFiltrados = cobrosFiltrados.filter(function(c) { return c.metodo === metodo; });
+    if (cliente) cobrosFiltrados = cobrosFiltrados.filter(function(c) { return c.cliente === cliente; });
+    cobrosFiltrados.sort(function(a, b) { return new Date(b.fecha) - new Date(a.fecha); });
+    var total = 0, ef = 0, tar = 0, biz = 0, tra = 0;
+    var html = '';
+    cobrosFiltrados.forEach(function(c) {
+        total += c.importe;
+        if (c.metodo === 'Efectivo') ef += c.importe;
+        else if (c.metodo === 'Tarjeta') tar += c.importe;
+        else if (c.metodo === 'Bizum') biz += c.importe;
+        else if (c.metodo === 'Transferencia') tra += c.importe;
+        html += '<tr><td>' + c.fecha + '</td><td style="font-weight:bold;color:#10b981;">' + c.importe.toFixed(2) + '€</td><td>' + c.metodo + '</td><td>' + (c.cliente || '-') + '</td><td>' + (c.concepto || '-') + '</td><td>' + (c.notas || '-') + '</td></tr>';
+    });
+    document.getElementById('tb-caja-detallada').innerHTML = html || '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:20px;">No hay cobros con estos filtros</td></tr>';
+    document.getElementById('caja-det-total').textContent = total.toFixed(2) + '€';
+    document.getElementById('caja-det-efectivo').textContent = ef.toFixed(2) + '€';
+    document.getElementById('caja-det-tarjeta').textContent = tar.toFixed(2) + '€';
+    document.getElementById('caja-det-bizum').textContent = biz.toFixed(2) + '€';
+    document.getElementById('caja-det-transferencia').textContent = tra.toFixed(2) + '€';
+    document.getElementById('caja-det-numero').textContent = cobrosFiltrados.length;
+}
+function limpiarFiltrosCaja() {
+    document.getElementById('filtro-caja-tipo').value = 'dia';
+    document.getElementById('filtro-caja-metodo').value = '';
+    document.getElementById('filtro-caja-cliente').value = '';
+    inicializarFiltrosCaja();
+    aplicarFiltrosCaja();
+}
+function exportarCajaExcel() {
+    var filas = document.querySelectorAll('#tb-caja-detallada tr');
+    if (filas.length === 0 || (filas.length === 1 && filas[0].querySelector('td[colspan]'))) {
+        alert('⚠️ No hay datos para exportar. Aplica un filtro primero.');
+        return;
+    }
+    var tipo = document.getElementById('filtro-caja-tipo').value;
+    var metodo = document.getElementById('filtro-caja-metodo').value;
+    var cliente = document.getElementById('filtro-caja-cliente').value;
+    var nombreArchivo = 'caja';
+    if (tipo === 'dia') nombreArchivo += '_' + document.getElementById('filtro-caja-dia').value;
+    else if (tipo === 'mes') nombreArchivo += '_' + mesesAnio[parseInt(document.getElementById('filtro-caja-mes').value)] + '_' + document.getElementById('filtro-caja-anio').value;
+    else if (tipo === 'anio') nombreArchivo += '_' + document.getElementById('filtro-caja-anio').value;
+    else if (tipo === 'rango') nombreArchivo += '_' + document.getElementById('filtro-caja-desde').value + '_a_' + document.getElementById('filtro-caja-hasta').value;
+    if (metodo) nombreArchivo += '_' + metodo;
+    if (cliente) nombreArchivo += '_' + cliente.replace(/\s+/g, '_');
+    var csv = '\uFEFF';
+    csv += 'Fecha;Importe (€);Método;Cliente;Concepto;Notas\n';
+    cobros.forEach(function(c) {
+        var tipo2 = document.getElementById('filtro-caja-tipo').value;
+        var metodo2 = document.getElementById('filtro-caja-metodo').value;
+        var cliente2 = document.getElementById('filtro-caja-cliente').value;
+        var incluir = true;
+        if (tipo2 === 'dia') { var dia = document.getElementById('filtro-caja-dia').value; if (dia && c.fecha !== dia) incluir = false; }
+        else if (tipo2 === 'mes') { var mes = parseInt(document.getElementById('filtro-caja-mes').value); var anio = parseInt(document.getElementById('filtro-caja-anio').value); var f = new Date(c.fecha); if (f.getFullYear() !== anio || f.getMonth() !== mes) incluir = false; }
+        else if (tipo2 === 'anio') { var anio2 = parseInt(document.getElementById('filtro-caja-anio').value); if (new Date(c.fecha).getFullYear() !== anio2) incluir = false; }
+        else if (tipo2 === 'rango') { var desde = document.getElementById('filtro-caja-desde').value; var hasta = document.getElementById('filtro-caja-hasta').value; if (desde && c.fecha < desde) incluir = false; if (hasta && c.fecha > hasta) incluir = false; }
+        if (metodo2 && c.metodo !== metodo2) incluir = false;
+        if (cliente2 && c.cliente !== cliente2) incluir = false;
+        if (incluir) {
+            var concepto = (c.concepto || '').replace(/;/g, ',');
+            var notas = (c.notas || '').replace(/;/g, ',');
+            var clienteTxt = (c.cliente || '').replace(/;/g, ',');
+            csv += c.fecha + ';' + c.importe.toFixed(2).replace('.', ',') + ';' + c.metodo + ';' + clienteTxt + ';' + concepto + ';' + notas + '\n';
+        }
+    });
+    var total = document.getElementById('caja-det-total').textContent;
+    var efectivo = document.getElementById('caja-det-efectivo').textContent;
+    var tarjeta = document.getElementById('caja-det-tarjeta').textContent;
+    var bizum = document.getElementById('caja-det-bizum').textContent;
+    var transferencia = document.getElementById('caja-det-transferencia').textContent;
+    var numero = document.getElementById('caja-det-numero').textContent;
+    csv += '\n';
+    csv += 'RESUMEN;;;;;\n';
+    csv += 'Total cobros;' + numero + ';;;;\n';
+    csv += 'TOTAL;' + total.replace('.', ',') + ';;;;\n';
+    csv += 'Efectivo;' + efectivo.replace('.', ',') + ';;;;\n';
+    csv += 'Tarjeta;' + tarjeta.replace('.', ',') + ';;;;\n';
+    csv += 'Bizum;' + bizum.replace('.', ',') + ';;;;\n';
+    csv += 'Transferencia;' + transferencia.replace('.', ',') + ';;;;\n';
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = nombreArchivo + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    mostrarEstado('📥 Exportado a Excel', 3000);
+}
+function actualizarCajaDetallada() {
+    if (document.getElementById('s4').classList.contains('active')) {
+        aplicarFiltrosCaja();
+    }
+}
 function mostrarEstado(mensaje, duracion) { var el = document.getElementById('estado'); el.textContent = mensaje; el.classList.add('visible'); setTimeout(function() { el.classList.remove('visible'); }, duracion); }
 window.onload = function() {
     actualizarReloj();
@@ -1354,7 +1505,7 @@ window.onload = function() {
             document.getElementById('cb1').valueAsDate = new Date();
             mostrarEstado('✅ Cobro registrado', 2000);
         }).catch(function(err) {
-            alert(' Error al registrar cobro: ' + err.message);
+            alert('❌ Error al registrar cobro: ' + err.message);
         });
     };
     document.getElementById('t1').addEventListener('click', function(e) { if (!this.disabled && document.getElementById('d1').value && document.getElementById('masajista').value) abrirSelectorHoras(); });
@@ -1394,11 +1545,11 @@ window.onload = function() {
 </div>
 <div class="nav">
 <button id="b1" class="active" onclick="cambiar(1)">🏠 Inicio</button>
-<button id="b2" onclick="cambiar(2)">📅 Citas</button>
-<button id="b3" onclick="cambiar(3)">👥 Clientes</button>
+<button id="b2" onclick="cambiar(2)"> Citas</button>
+<button id="b3" onclick="cambiar(3)"> Clientes</button>
 <button id="b4" onclick="cambiar(4)">💰 Caja</button>
 <button id="b7" onclick="cambiar(5)">💲 Tarifas</button>
-<button id="b6" onclick="cambiar(6)"> Histórico</button>
+<button id="b6" onclick="cambiar(6)">📊 Histórico</button>
 <button id="b8" onclick="cambiar(8)">🔍 Auditoría</button>
 <button id="b5" onclick="cambiar(7)">⚙️ Config</button>
 </div>
@@ -1488,7 +1639,7 @@ window.onload = function() {
 </div>
 </div>
 <div class="card">
-<h2>📈 Gráficos de Ingresos</h2>
+<h2> Gráficos de Ingresos</h2>
 <div class="filtros-container">
 <label><strong>Período:</strong></label>
 <select id="grafico-periodo" onchange="cambiarGrafico()"><option value="mes">Por Mes</option><option value="año">Por Año</option></select>
@@ -1518,6 +1669,79 @@ window.onload = function() {
 <div class="card">
 <h2>📋 Movimientos de Caja</h2>
 <table><thead><tr><th>Fecha</th><th>Importe</th><th>Método</th><th>Cliente</th><th>Concepto</th><th>Acciones</th></tr></thead><tbody id="tb3"></tbody></table>
+</div>
+<div class="card">
+<h2>📊 Caja Detallada</h2>
+<p style="color:#64748b;margin-bottom:15px;">Consulta y filtra todos los cobros por período, método o cliente. Exporta a Excel cuando lo necesites.</p>
+<div class="filtros-container">
+<div class="form-group" style="margin-bottom:0;">
+<label><strong>Filtrar por:</strong></label>
+<select id="filtro-caja-tipo" onchange="cambiarFiltroCaja()">
+<option value="dia">Día específico</option>
+<option value="mes">Mes completo</option>
+<option value="anio">Año completo</option>
+<option value="rango">Rango de fechas</option>
+</select>
+</div>
+<input type="date" id="filtro-caja-dia" title="Día específico">
+<select id="filtro-caja-mes" title="Mes">
+<option value="0">Enero</option>
+<option value="1">Febrero</option>
+<option value="2">Marzo</option>
+<option value="3">Abril</option>
+<option value="4">Mayo</option>
+<option value="5">Junio</option>
+<option value="6">Julio</option>
+<option value="7">Agosto</option>
+<option value="8">Septiembre</option>
+<option value="9">Octubre</option>
+<option value="10">Noviembre</option>
+<option value="11">Diciembre</option>
+</select>
+<select id="filtro-caja-anio" title="Año"></select>
+<input type="date" id="filtro-caja-desde" title="Desde">
+<input type="date" id="filtro-caja-hasta" title="Hasta">
+<div class="form-group" style="margin-bottom:0;">
+<label><strong>Método:</strong></label>
+<select id="filtro-caja-metodo">
+<option value="">Todos</option>
+<option>Efectivo</option>
+<option>Tarjeta</option>
+<option>Bizum</option>
+<option>Transferencia</option>
+</select>
+</div>
+<div class="form-group" style="margin-bottom:0;">
+<label><strong>Cliente:</strong></label>
+<select id="filtro-caja-cliente">
+<option value="">Todos</option>
+</select>
+</div>
+<button class="btn btn-primary" onclick="aplicarFiltrosCaja()">🔍 Filtrar</button>
+<button class="btn btn-secondary" onclick="limpiarFiltrosCaja()">🔄 Limpiar</button>
+</div>
+<div class="stats">
+<div class="stat-card"><div class="numero" id="caja-det-total">0€</div><div class="etiqueta">Total</div></div>
+<div class="stat-card"><div class="numero" id="caja-det-efectivo">0€</div><div class="etiqueta">Efectivo</div></div>
+<div class="stat-card"><div class="numero" id="caja-det-tarjeta">0€</div><div class="etiqueta">Tarjeta</div></div>
+<div class="stat-card"><div class="numero" id="caja-det-bizum">0€</div><div class="etiqueta">Bizum</div></div>
+<div class="stat-card"><div class="numero" id="caja-det-transferencia">0€</div><div class="etiqueta">Transferencia</div></div>
+<div class="stat-card"><div class="numero" id="caja-det-numero">0</div><div class="etiqueta">Nº cobros</div></div>
+</div>
+<button class="btn btn-success" onclick="exportarCajaExcel()" style="margin-bottom:15px;">📥 Exportar a Excel</button>
+<table>
+<thead>
+<tr>
+<th>Fecha</th>
+<th>Importe</th>
+<th>Método</th>
+<th>Cliente</th>
+<th>Concepto</th>
+<th>Notas</th>
+</tr>
+</thead>
+<tbody id="tb-caja-detallada"></tbody>
+</table>
 </div>
 </div>
 <div id="s5" class="seccion">
@@ -1553,11 +1777,11 @@ window.onload = function() {
 <h3>📦 Copia de Seguridad</h3>
 <p style="color:#64748b;margin-bottom:10px;">Exporta todos los datos a un archivo JSON para tener una copia de seguridad.</p>
 <button class="btn btn-primary" id="btn-exportar">📥 Exportar datos</button>
-<button class="btn btn-secondary" id="btn-importar"> Importar datos</button>
+<button class="btn btn-secondary" id="btn-importar">📤 Importar datos</button>
 <input type="file" id="input-importar" accept=".json" style="display:none;">
 <h3 style="margin-top:20px;">⚠️ Zona Peligrosa</h3>
 <p style="color:#64748b;margin-bottom:10px;">Borra datos de la base de datos. Esta acción no se puede deshacer.</p>
-<button class="btn btn-danger" id="btn-reset">️ Resetear Base de Datos</button>
+<button class="btn btn-danger" id="btn-reset">🗑️ Resetear Base de Datos</button>
 </div>
 </div>
 <div id="s8" class="seccion">
@@ -1572,17 +1796,17 @@ window.onload = function() {
 </div>
 <div id="modal-cobro">
 <div class="modal-content">
-<h3> Registrar Cobro</h3>
+<h3>💳 Registrar Cobro</h3>
 <div id="modal-cliente-info" style="margin-bottom:15px;padding:10px;background:#f0fdfa;border-radius:6px;"></div>
 <div style="text-align:center;margin-bottom:20px;"><strong style="font-size:1.5rem;color:#0d9488;">Importe: <span id="modal-importe">0€</span></strong></div>
 <h4 style="margin-bottom:10px;">Método de pago:</h4>
 <div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)">💵 Efectivo</div>
-<div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)">💳 Tarjeta</div>
+<div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)"> Tarjeta</div>
 <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)">📱 Bizum</div>
-<div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)">🏦 Transferencia</div>
+<div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"> Transferencia</div>
 <div style="margin-top:20px;display:flex;gap:10px;">
 <button class="btn btn-primary" style="flex:1;" onclick="confirmarCobro()">✅ Confirmar Cobro</button>
-<button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalCobro()"> Cancelar</button>
+<button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalCobro()">❌ Cancelar</button>
 </div>
 </div>
 </div>
@@ -1594,7 +1818,7 @@ window.onload = function() {
         <div id="password-error" class="error">❌ Contraseña incorrecta</div>
         <div style="margin-top:20px;display:flex;gap:10px;">
             <button class="btn btn-primary" style="flex:1;" onclick="verificarPasswordCobro()">✅ Confirmar</button>
-            <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalPassword()">❌ Cancelar</button>
+            <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalPassword()"> Cancelar</button>
         </div>
     </div>
 </div>
