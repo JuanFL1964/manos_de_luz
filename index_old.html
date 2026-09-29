@@ -11,6 +11,122 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #1e293b; padding-bottom: 80px; }
+.header { background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); color: white; padding: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+.header h1 { font-size: 1.5rem; margin-bottom: 5px; }
+.reloj { font-size: 0.85rem; opacity: 0.9; }
+.nav { display: flex; overflow-x: auto; background: white; border-bottom: 2px solid #e2e8f0; position: sticky; top: 80px; z-index: 99; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.nav button { flex: 1; min-width: 80px; padding: 12px 8px; border: none; background: white; color: #64748b; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.3s; border-bottom: 3px solid transparent; white-space: nowrap; }
+.nav button.active { color: #0d9488; border-bottom-color: #0d9488; background: #f0fdfa; }
+.nav button:hover { background: #f1f5f9; }
+.seccion { display: none; padding: 15px; max-width: 1200px; margin: 0 auto; }
+.seccion.active { display: block; }
+.card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.card h2 { color: #0d9488; margin-bottom: 15px; font-size: 1.2rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+.card h3 { color: #475569; margin-bottom: 12px; font-size: 1rem; }
+.card.editando { border: 2px solid #0d9488; box-shadow: 0 4px 15px rgba(13, 148, 136, 0.2); }
+#card-cliente, #card-cita { scroll-margin-top: 180px; }
+.formulario-editando { animation: resaltarFormulario 2s ease-out; box-shadow: 0 0 20px rgba(245, 158, 11, 0.6); border: 2px solid #f59e0b !important; }
+@keyframes resaltarFormulario { 0% { background-color: #fef3c7; transform: scale(1.02); } 50% { background-color: #fde68a; } 100% { background-color: transparent; transform: scale(1); } }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #475569; font-size: 0.85rem; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; transition: border 0.3s; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1); }
+.form-group input:disabled, .form-group select:disabled { background: #f1f5f9; cursor: not-allowed; opacity: 0.6; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.btn { padding: 12px 20px; border: none; border-radius: 6px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; margin-right: 5px; }
+.btn-primary { background: #0d9488; color: white; }
+.btn-primary:hover { background: #0f766e; }
+.btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+.btn-secondary { background: #64748b; color: white; }
+.btn-secondary:hover { background: #475569; }
+.btn-danger { background: #ef4444; color: white; }
+.btn-danger:hover { background: #dc2626; }
+.btn-warning { background: #f59e0b; color: white; }
+.btn-warning:hover { background: #d97706; }
+.btn-success { background: #10b981; color: white; }
+.btn-success:hover { background: #059669; }
+.btn-editar { background: #3b82f6; color: white; padding: 6px 12px; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; margin-right: 3px; }
+.btn-editar:hover { background: #2563eb; }
+.btn-eliminar { background: #ef4444; color: white; padding: 6px 12px; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; }
+.btn-eliminar:hover { background: #dc2626; }
+.btn-whatsapp { background: #25d366; color: white; padding: 6px 12px; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; margin-right: 3px; }
+.btn-whatsapp:hover { background: #128c7e; }
+.btn-whatsapp-final { background: #25d366; color: white; padding: 6px 12px; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; }
+.btn-gratis { background: #f59e0b; color: white; padding: 6px 12px; font-size: 0.8rem; border: none; border-radius: 4px; cursor: default; font-weight: bold; }
+.btn-cobrar { background: #10b981; color: white; padding: 6px 12px; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; margin-right: 3px; }
+.btn-cobrar:hover { background: #059669; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+th { background: #f1f5f9; color: #475569; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
+tr:hover { background: #f8fafc; }
+tr.cobrado { background: #f0fdf4; }
+tr.pendiente-pago { background: #fffbeb; }
+tr.gratis { background: #fef3c7; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; }
+.stat-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); text-align: center; }
+.stat-card .numero { font-size: 1.8rem; font-weight: bold; color: #0d9488; }
+.stat-card .etiqueta { font-size: 0.8rem; color: #64748b; margin-top: 5px; }
+.badge-fidelidad { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-left: 8px; }
+.badge-fidelidad.listo { background: #f59e0b; color: white; }
+.badge-fidelidad.cerca { background: #fef3c7; color: #92400e; }
+.badge-fidelidad.normal { background: #e0f2fe; color: #0369a1; }
+.alerta-regalo { background: #fef3c7; padding: 12px; border-radius: 8px; margin-top: 10px; display: flex; align-items: center; gap: 10px; }
+.alerta-regalo .icono { background: #f59e0b; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; }
+.alerta-regalo .texto { flex: 1; font-size: 0.9rem; }
+.progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 5px; }
+.progress-bar .fill { height: 100%; background: #0d9488; transition: width 0.5s; }
+.progress-bar .fill.completo { background: #f59e0b; }
+.info-fidelidad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+.info-fidelidad .stat { text-align: center; padding: 10px; background: #f0fdfa; border-radius: 8px; }
+.info-fidelidad .stat .numero { font-size: 1.5rem; font-weight: bold; color: #0d9488; }
+.info-fidelidad .stat .etiqueta { font-size: 0.75rem; color: #64748b; }
+#visualizador-horarios { display: none; background: white; border-radius: 12px; padding: 15px; margin-top: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+#visualizador-horarios.activo { display: block; }
+#horario-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 5px; margin-top: 10px; }
+.horario-slot { padding: 8px 4px; text-align: center; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+.horario-slot.libre { background: #d1fae5; color: #065f46; }
+.horario-slot.libre:hover { background: #a7f3d0; }
+.horario-slot.ocupado { background: #fee2e2; color: #991b1b; cursor: not-allowed; }
+.horario-slot.limpieza { background: #fef3c7; color: #92400e; cursor: not-allowed; }
+.horario-slot.seleccionado { background: #0d9488; color: white; font-weight: bold; }
+#alerta-solapamiento { display: none; background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 6px; margin-top: 10px; font-weight: 600; }
+#alerta-solapamiento.visible { display: block; }
+#mensaje-solapamiento { font-weight: 600; }
+#info-precio { background: #f0fdfa; padding: 10px; border-radius: 6px; margin-top: 10px; display: none; }
+#precio-tarifa { font-size: 1.2rem; font-weight: bold; color: #0d9488; }
+#aviso-fidelidad { display: none; }
+#ficha-fidelidad { display: none; margin-top: 15px; padding: 15px; background: #f0fdfa; border-radius: 8px; }
+#modal-cobro { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+#modal-cobro.visible { display: flex; }
+.modal-content { background: white; padding: 25px; border-radius: 12px; max-width: 400px; width: 90%; }
+.modal-content h3 { color: #0d9488; margin-bottom: 15px; }
+.metodo-pago { padding: 12px; margin: 8px 0; border: 2px solid #e2e8f0; border-radius: 8px; cursor: pointer; text-align: center; font-weight: 600; transition: all 0.3s; }
+.metodo-pago:hover { border-color: #0d9488; background: #f0fdfa; }
+.metodo-pago.selected { border-color: #0d9488; background: #f0fdfa; color: #0d9488; }
+#estado { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0d9488; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+#estado.visible { display: block; animation: slideUp 0.3s ease; }
+@keyframes slideUp { from { transform: translate(-50%, 100px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+#banner-instalacion { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #0d9488; color: white; padding: 15px; text-align: center; z-index: 1000; }
+#banner-instalacion button { background: white; color: #0d9488; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; margin: 5px; cursor: pointer; }
+.grafico-container { position: relative; height: 400px; margin-top: 15px; }
+.grafico-container-pequeno { position: relative; height: 300px; margin-top: 15px; }
+.filtros-container { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+.filtros-container select, .filtros-container input { padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; }
+#busqueda-clientes { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; margin-bottom: 10px; }
+#contador-resultados { font-size: 0.85rem; color: #64748b; margin-bottom: 10px; }
+.deshabilitado { opacity: 0.5; pointer-events: none; }
+.activo { opacity: 1; pointer-events: auto; }
+#duracion-container { margin-top: 10px; padding: 10px; background: #f8fafc; border-radius: 6px; }
+#duracion-container label { display: inline-block; margin-right: 15px; cursor: pointer; }
+#label-gratis { margin-top: 10px; display: inline-block; padding: 10px; background: #f0fdfa; border-radius: 6px; cursor: pointer; }
+#label-gratis.deshabilitado { opacity: 0.5; cursor: not-allowed; }
+#label-gratis.activo { opacity: 1; cursor: pointer; }
+@media (max-width: 768px) { .form-row, .form-row-3 { grid-template-columns: 1fr; } .stats { grid-template-columns: repeat(2, 1fr); } .info-fidelidad { grid-template-columns: 1fr; } table { font-size: 0.75rem; } th, td { padding: 6px 4px; } }
+</style>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyByfQM9JByNrWD1R1qZ28pjBrxC5sGvbUY",
@@ -157,7 +273,7 @@ function resetearBaseDatos() {
     var borrarClientes = confirm('¿Borrar TODOS los CLIENTES?\n\n⚠️ Esto eliminará nombres, teléfonos, emails y puntos de fidelidad.\n\n(SÍ = Borrar clientes | NO = Mantener clientes)');
     var borrarCitas = confirm('¿Borrar TODAS las CITAS?\n\n⚠️ Esto eliminará el historial de citas pasadas y futuras.\n\n(SÍ = Borrar citas | NO = Mantener citas)');
     var borrarCobros = confirm('¿Borrar TODOS los COBROS?\n\n⚠️ Esto eliminará el historial de pagos y movimientos de caja.\n\n(SÍ = Borrar cobros | NO = Mantener cobros)');
-    if (!borrarClientes && !borrarCitas && !borrarCobros) { alert('❌ No has seleccionado nada para borrar. Operación cancelada.'); return; }
+    if (!borrarClientes && !borrarCitas && !borrarCobros) { alert('No has seleccionado nada para borrar. Operación cancelada.'); return; }
     var resumen = '📋 RESUMEN DE LO QUE SE BORRARÁ:\n\n';
     if (borrarClientes) resumen += '✅ Clientes: ' + clientes.length + ' registros\n';
     else resumen += '❌ Clientes: SE MANTIENEN (' + clientes.length + ' registros)\n';
@@ -165,7 +281,7 @@ function resetearBaseDatos() {
     else resumen += '❌ Citas: SE MANTIENEN (' + citas.length + ' registros)\n';
     if (borrarCobros) resumen += '✅ Cobros: ' + cobros.length + ' registros\n';
     else resumen += '❌ Cobros: SE MANTIENEN (' + cobros.length + ' registros)\n';
-    resumen += '\nLas TARIFAS siempre se mantienen.\n\n⚠️ ¿CONFIRMAR BORRADO?\n\n(SÍ = Borrar | NO = Cancelar)';
+    resumen += '\nLas TARIFAS siempre se mantienen.\n\n️ ¿CONFIRMAR BORRADO?\n\n(SÍ = Borrar | NO = Cancelar)';
     var confirmarFinal = confirm(resumen);
     if (!confirmarFinal) { alert('❌ Operación cancelada. No se ha borrado nada.'); return; }
     var batch = db.batch();
@@ -177,20 +293,20 @@ function resetearBaseDatos() {
         var msg = '✅ Base de datos actualizada:\n\n';
         if (borrarClientes) msg += '🗑️ ' + contadores.clientes + ' clientes borrados\n';
         else msg += '✔️ ' + contadores.clientes + ' clientes mantenidos\n';
-        if (borrarCitas) msg += '🗑️ ' + contadores.citas + ' citas borradas\n';
+        if (borrarCitas) msg += '️ ' + contadores.citas + ' citas borradas\n';
         else msg += '✔️ ' + contadores.citas + ' citas mantenidas\n';
         if (borrarCobros) msg += '🗑️ ' + contadores.cobros + ' cobros borrados\n';
         else msg += '✔️ ' + contadores.cobros + ' cobros mantenidos\n';
         msg += '\nLa página se recargará en 2 segundos.';
         alert(msg);
         setTimeout(function() { location.reload(); }, 2000);
-    }).catch(function(err) { alert('❌ Error al borrar: ' + err.message); });
+    }).catch(function(err) { alert(' Error al borrar: ' + err.message); });
 }
 function exportarDatos() {
     try {
         var d = { clientes: clientes, citas: citas, cobros: cobros, tarifas: tarifas, fecha: new Date().toISOString(), version: '2.0' };
         var jsonStr = JSON.stringify(d, null, 2);
-        if (jsonStr.length < 50) { alert('⚠️ No hay datos'); return; }
+        if (jsonStr.length < 50) { alert('️ No hay datos'); return; }
         var blob = new Blob([jsonStr], { type: 'application/json' });
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
@@ -199,7 +315,7 @@ function exportarDatos() {
         document.body.appendChild(a);
         a.click();
         setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
-        mostrarEstado('💾 Copia descargada', 3000);
+        mostrarEstado('✅ Copia descargada', 3000);
     } catch(err) { alert('Error: ' + err.message); }
 }
 function importarDatos(file) {
@@ -255,7 +371,7 @@ function mostrarVisualizadorHorarios(fecha, masajista) {
             slot.textContent = timeStr;
             slot.dataset.hora = timeStr;
             var estado = verificarEstadoHorario(fecha, timeStr, masajista, null);
-            if (estado === 'ocupado') { slot.classList.add('ocupado'); slot.title = '🔒 Ocupado'; }
+            if (estado === 'ocupado') { slot.classList.add('ocupado'); slot.title = ' Ocupado'; }
             else if (estado === 'limpieza') { slot.classList.add('limpieza'); slot.title = '🧹 Limpieza'; }
             else { slot.classList.add('libre'); slot.title = '✅ Disponible'; slot.onclick = function() { seleccionarHoraDesdeVisualizador(this.dataset.hora); }; }
             if (timeStr === horaActual) slot.classList.add('seleccionado');
@@ -500,14 +616,14 @@ function guardarPuntosEditados(clienteId) {
     var inputPuntos = document.getElementById('edit-puntos');
     if (!inputPuntos) { alert('❌ Error: No se encuentra el campo de puntos'); return; }
     var nuevosPuntos = parseFloat(inputPuntos.value);
-    if (isNaN(nuevosPuntos) || nuevosPuntos < 0) { alert('❌ Los puntos deben ser un número válido mayor o igual a 0'); return; }
+    if (isNaN(nuevosPuntos) || nuevosPuntos < 0) { alert('Los puntos deben ser un número válido mayor o igual a 0'); return; }
     var mensaje = '¿Guardar los nuevos valores?\n\nPuntos: ' + nuevosPuntos.toFixed(1);
     if (nuevosPuntos >= 10) mensaje += '\n\n⚠️ El cliente tendrá 1 MASAJE GRATIS disponible';
     if (confirm(mensaje)) {
         db.collection('clientes').doc(clienteId).update({ puntosFidelidad: nuevosPuntos }).then(function() {
             alert('✅ Puntos actualizados correctamente');
             mostrarFichaFidelidad(clienteId);
-        }).catch(function(err) { alert('❌ Error al guardar: ' + err.message); });
+        }).catch(function(err) { alert('Error al guardar: ' + err.message); });
     }
 }
 function getPuntosPorDuracion(duracion) { return duracion == 60 ? 1 : (duracion == 90 ? 1.5 : 2); }
@@ -571,7 +687,7 @@ function guardarCita(e) {
                     db.collection('clientes').doc(cliente.id).update({puntosFidelidad: nuevosPuntos});
                     if (acabaDeAlcanzar) {
                         setTimeout(function() { 
-                            alert('🎉 ¡' + cliente.nombre + ' ha alcanzado los ' + nuevosPuntos.toFixed(1) + ' puntos!\n\nTIENE 1 MASAJE GRATIS DISPONIBLE'); 
+                            alert(' ¡' + cliente.nombre + ' ha alcanzado los ' + nuevosPuntos.toFixed(1) + ' puntos!\n\nTIENE 1 MASAJE GRATIS DISPONIBLE'); 
                         }, 500);
                     }
                     mostrarEstado('✅ Cita guardada - +' + puntos + ' puntos (Total: ' + nuevosPuntos.toFixed(1) + ')', 2000);
@@ -592,8 +708,8 @@ function eliminarCliente(id) {
 function eliminarCita(id) {
     var cita = citas.find(function(c) { return c.id === id; });
     if (!cita) { alert('❌ No se encuentra la cita'); return; }
-    var mensaje = '🚨 DANGER - ELIMINACIÓN DE CITA 🚨\n\n';
-    mensaje += '📋 DATOS DE LA CITA:\n';
+    var mensaje = '🚨 DANGER - ELIMINACIÓN DE CITA \n\n';
+    mensaje += ' DATOS DE LA CITA:\n';
     mensaje += '• Cliente: ' + cita.cliente + '\n';
     mensaje += '• Fecha: ' + cita.fecha + '\n';
     mensaje += '• Hora: ' + cita.hora + '\n';
@@ -641,11 +757,29 @@ function eliminarCita(id) {
             timestamp: Date.now()
         };
         db.collection('auditoria').add(registroAuditoria).then(function() {
+            if (cita.cobrado && cita.precio > 0) {
+                var cobrosAEliminar = cobros.filter(function(cb) { 
+                    return cb.fecha === cita.fecha && 
+                           cb.cliente === cita.cliente && 
+                           cb.importe === cita.precio;
+                });
+                if (cobrosAEliminar.length > 0) {
+                    var batch = db.batch();
+                    cobrosAEliminar.forEach(function(cobro) {
+                        batch.delete(db.collection('cobros').doc(cobro.id));
+                    });
+                    batch.commit().then(function() {
+                        console.log('✅ Cobro(s) eliminado(s):', cobrosAEliminar.length);
+                    }).catch(function(err) {
+                        console.log('❌ Error al eliminar cobro:', err);
+                    });
+                }
+            }
             db.collection('citas').doc(id).delete().then(function() {
                 mostrarEstado('🗑️ Cita eliminada (registrada en auditoría)', 3000);
                 console.log('✅ Cita eliminada. Registro de auditoría:', registroAuditoria);
             }).catch(function(err) {
-                alert('❌ Error al eliminar cita: ' + err.message);
+                alert('Error al eliminar cita: ' + err.message);
             });
         }).catch(function(err) {
             alert('❌ Error al crear registro de auditoría: ' + err.message);
@@ -666,6 +800,13 @@ function editarCliente(id) {
     document.getElementById('btn-cancelar-cliente').style.display = 'inline-block';
     document.getElementById('card-cliente').classList.add('editando');
     mostrarFichaFidelidad(id);
+    document.getElementById('card-cliente').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(function() {
+        document.getElementById('card-cliente').classList.add('formulario-editando');
+        setTimeout(function() {
+            document.getElementById('card-cliente').classList.remove('formulario-editando');
+        }, 2000);
+    }, 500);
 }
 function editarCita(id) {
     var c = citas.find(function(x) { return x.id === id; });
@@ -697,6 +838,13 @@ function editarCita(id) {
     calcularYMostrarPrecio();
     aplicarLogicaGratis();
     mostrarVisualizadorHorarios(c.fecha, c.masajista || 'Camilla1');
+    document.getElementById('card-cita').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(function() {
+        document.getElementById('card-cita').classList.add('formulario-editando');
+        setTimeout(function() {
+            document.getElementById('card-cita').classList.remove('formulario-editando');
+        }, 2000);
+    }, 500);
 }
 function cancelarEdicionCliente() { 
     editandoCliente = null; 
@@ -745,7 +893,7 @@ function actualizar() {
         var gratisTag = esGratis ? ' <span style="background:#f59e0b;color:white;padding:2px 6px;border-radius:4px;">GRATIS</span>' : '';
         var masajistaTag = getMasajistaTag(c.masajista, '12px');
         var claseFila = c.cobrado ? 'cobrado' : (esGratis ? 'gratis' : 'pendiente-pago');
-        html2 += '<tr class="' + claseFila + '"><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + ' (' + c.duracion + ' min)' + gratisTag + '</td><td>' + masajistaTag + '</td><td>' + (c.precio ? c.precio.toFixed(2) + '€' : '-') + '</td><td>' + estado + '</td><td>' + btnCobrar + '<button class="btn-editar" onclick="editarCita(\'' + c.id + '\')">Editar</button><button class="btn-eliminar" onclick="eliminarCita(\'' + c.id + '\')">Eliminar</button><button class="btn-whatsapp-final" onclick="enviarWhatsAppCita(\'' + c.id + '\')" title="Enviar recordatorio por WhatsApp"></button></td></tr>';
+        html2 += '<tr class="' + claseFila + '"><td>' + c.fecha + '</td><td>' + c.hora + '</td><td>' + c.cliente + '</td><td>' + c.servicio + ' (' + c.duracion + ' min)' + gratisTag + '</td><td>' + masajistaTag + '</td><td>' + (c.precio ? c.precio.toFixed(2) + '€' : '-') + '</td><td>' + estado + '</td><td>' + btnCobrar + '<button class="btn-editar" onclick="editarCita(\'' + c.id + '\')">Editar</button><button class="btn-eliminar" onclick="eliminarCita(\'' + c.id + '\')">Eliminar</button><button class="btn-whatsapp-final" onclick="enviarWhatsAppCita(\'' + c.id + '\')" title="Enviar recordatorio por WhatsApp">📱</button></td></tr>';
     });
     document.getElementById('tb1').innerHTML = html2;
     var ahora = new Date();
@@ -852,7 +1000,7 @@ function enviarWhatsAppCita(citaId) {
     mensaje += 'Hora: ' + cita.hora + 'h\n';
     mensaje += 'Servicio: ' + cita.servicio + ' (' + cita.duracion + ' min)\n\n';
     mensaje += 'Si necesitas cambiar o cancelar la cita, avisanos con antelacion. ¡Te esperamos!';
-    if (confirm(' Enviar recordatorio por WhatsApp a ' + cita.cliente + '?\n\n' + mensaje)) {
+    if (confirm('📱 Enviar recordatorio por WhatsApp a ' + cita.cliente + '?\n\n' + mensaje)) {
         var url = 'whatsapp://send?phone=' + telefono + '&text=' + encodeURIComponent(mensaje);
         window.open(url, '_blank');
     }
@@ -992,7 +1140,7 @@ function actualizarHistorico() {
     historicas.forEach(function(c) {
         var cobro = cobros.find(function(cb) { return cb.cliente === c.cliente && cb.concepto.includes(c.servicio) && cb.fecha === c.fecha; });
         var metodo = cobro ? cobro.metodo : '-';
-        var estado = c.cobrado ? '<span style="color:#10b981;font-weight:bold;">✓ Cobrado</span>' : '<span style="color:#ef4444;font-weight:bold;"> No cobrado</span>';
+        var estado = c.cobrado ? '<span style="color:#10b981;font-weight:bold;">✓ Cobrado</span>' : '<span style="color:#ef4444;font-weight:bold;">❌ No cobrado</span>';
         if (c.cobrado) totalHistorico += c.precio || 0;
         var partes = c.hora.split(':');
         var minCita = parseInt(partes[0]) * 60 + parseInt(partes[1]);
@@ -1061,7 +1209,7 @@ function actualizarGraficos() {
 function actualizarTablaAuditoria() {
     var html = '';
     if (auditoria.length === 0) {
-        html = '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:30px;">📋 No hay registros de eliminaciones</td></tr>';
+        html = '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:30px;"> No hay registros de eliminaciones</td></tr>';
     } else {
         auditoria.forEach(function(reg) {
             var fechaEliminacion = reg.fecha ? new Date(reg.fecha).toLocaleString('es-ES') : '-';
@@ -1118,7 +1266,7 @@ window.onload = function() {
             document.getElementById('cb1').valueAsDate = new Date();
             mostrarEstado('✅ Cobro registrado', 2000);
         }).catch(function(err) {
-            alert(' Error al registrar cobro: ' + err.message);
+            alert('Error al registrar cobro: ' + err.message);
         });
     };
     document.getElementById('t1').addEventListener('click', function(e) { if (!this.disabled && document.getElementById('d1').value && document.getElementById('masajista').value) abrirSelectorHoras(); });
@@ -1146,638 +1294,214 @@ window.onload = function() {
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./service-worker.js').then(function(reg) { console.log('✅ SW registrado'); }).catch(function(err) { console.log('❌ Error:', err); }); }
 };
 </script>
-<style>
-* { box-sizing: border-box; }
-body { font-family: Arial, sans-serif; background: #f0fdfa; margin: 0; font-size: 16px; }
-img { max-width: 100%; height: auto; }
-.header { background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
-.header-centro { text-align: center; flex: 1; }
-.header-derecha { text-align: right; flex: 1; }
-.header-izquierda { flex: 1; }
-.header-sync { background: rgba(255,255,255,0.15); color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 5px; }
-.logo { max-width: 150px; margin-bottom: 5px; }
-.reloj-fecha { font-weight: bold; font-size: 14px; margin-bottom: 3px; }
-.reloj-hora { font-size: 22px; font-family: 'Courier New', monospace; font-weight: bold; letter-spacing: 2px; }
-.nav { background: white; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow-x: auto; white-space: nowrap; }
-.nav button { background: none; border: none; padding: 15px; cursor: pointer; font-size: 16px; color: #64748b; white-space: nowrap; }
-.nav button.active { color: #0d9488; border-bottom: 3px solid #0d9488; font-weight: bold; }
-.main { max-width: 1200px; margin: 0 auto; padding: 30px; }
-.section { display: none; }
-.section.active { display: block; animation: fadeIn 0.3s; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-.card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-input, select, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-button.btn { background: #0d9488; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; margin-right: 5px; }
-button.btn:hover { background: #0f766e; }
-button.btn-cancelar { background: #6b7280; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; }
-button.btn-editar { background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-button.btn-eliminar { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
-button.btn-cobrar { background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-button.btn-gratis { background: #f59e0b; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: default; font-weight: bold; }
-button.btn-regalo { background: #f59e0b; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-button.btn-whatsapp { background: #25D366; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; font-size: 16px; }
-button.btn-whatsapp:hover { background: #128C7E; }
-button.btn-whatsapp-final { 
-    background: #25D366; 
-    color: white; 
-    border: none; 
-    padding: 6px 10px; 
-    border-radius: 4px; 
-    cursor: pointer; 
-    margin-left: 5px; 
-    font-size: 16px; 
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 32px;
-}
-button.btn-whatsapp-final:hover { background: #128C7E; }
-button.btn-whatsapp-final::before {
-    content: '';
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.611.611l4.458-1.495A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.24 0-4.326-.726-6.015-1.96l-.42-.31-3.09 1.034 1.034-3.09-.31-.42A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>');
-    background-size: contain;
-    background-repeat: no-repeat;
-}
-table { width: 100%; border-collapse: collapse; }
-th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-th { background: #f0fdfa; color: #0f766e; }
-.editando { background: #fef3c7 !important; border: 2px solid #f59e0b; }
-.alerta-regalo { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 10px 0; border-radius: 8px; display: flex; align-items: center; gap: 15px; }
-.alerta-regalo .icono { font-size: 1.5rem; font-weight: bold; color: #f59e0b; background: white; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
-.alerta-regalo .texto { flex: 1; }
-.alerta-regalo .texto strong { color: #92400e; font-size: 1.1rem; }
-.estado-guardado { position: fixed; bottom: 20px; right: 20px; background: #059669; color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0; transition: opacity 0.3s; z-index: 1000; }
-.estado-guardado.visible { opacity: 1; }
-.stats-caja { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
-.stat-box { background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #0d9488; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-.stat-box h4 { margin: 0 0 10px 0; color: #64748b; font-size: 14px; }
-.stat-box .amount { font-size: 2rem; font-weight: bold; color: #0d9488; }
-.stat-box.efectivo { border-left-color: #10b981; } .stat-box.efectivo .amount { color: #10b981; }
-.stat-box.tarjeta { border-left-color: #3b82f6; } .stat-box.tarjeta .amount { color: #3b82f6; }
-.stat-box.bizum { border-left-color: #8b5cf6; } .stat-box.bizum .amount { color: #8b5cf6; }
-.stat-box.transferencia { border-left-color: #f59e0b; } .stat-box.transferencia .amount { color: #f59e0b; }
-.stat-box.pendiente { border-left-color: #f59e0b; } .stat-box.pendiente .amount { color: #f59e0b; }
-.cobrado { background: #d1fae5; } 
-.pendiente-pago { background: #fef3c7; }
-.gratis { background: #fef3c7; }
-.filtros-grafico { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
-.filtros-grafico select, .filtros-grafico input { width: auto; margin: 0; }
-.grafico-container { position: relative; height: 400px; margin-bottom: 30px; }
-.mes-selector { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; }
-.duracion-container { display: flex; gap: 15px; margin: 15px 0; flex-wrap: wrap; }
-.duracion-option { display: flex; align-items: center; gap: 8px; padding: 10px 20px; background: #f0fdfa; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s; }
-.duracion-option:hover { background: #d1fae5; border-color: #0d9488; }
-.duracion-option input[type="radio"] { width: 20px; height: 20px; cursor: pointer; margin: 0; }
-.duracion-option label { cursor: pointer; font-weight: 500; color: #374151; margin: 0; }
-.duracion-option input[type="radio"]:checked + label { color: #0d9488; font-weight: bold; }
-.duracion-option:has(input[type="radio"]:checked) { background: #d1fae5; border-color: #0d9488; box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3); }
-.input-con-euro { position: relative; }
-.input-con-euro input { padding-left: 35px; }
-.input-con-euro::before { content: '€'; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #0d9488; font-weight: bold; font-size: 16px; }
-.tabla-precios { width: 100%; border-collapse: collapse; margin-top: 15px; }
-.tabla-precios th, .tabla-precios td { padding: 12px; text-align: center; border: 1px solid #ddd; }
-.tabla-precios th { background: #0d9488; color: white; }
-.tabla-precios tr:nth-child(even) { background: #f0fdfa; }
-.tabla-precios input[type="number"] { width: 100px; margin: 0; text-align: center; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
-.tabla-precios input[type="number"]:focus { border-color: #0d9488; outline: none; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1); }
-.info-precio { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 12px; margin: 10px 0; border-radius: 4px; }
-.info-precio strong { color: #1e40af; }
-.busqueda-container { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
-.busqueda-container label { font-weight: bold; color: #0f766e; }
-.busqueda-container input { flex: 1; min-width: 250px; padding: 12px 15px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 16px; }
-.busqueda-container input:focus { border-color: #0d9488; outline: none; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1); }
-.busqueda-container .contador-resultados { color: #64748b; font-size: 14px; }
-.badge-fidelidad { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 5px; }
-.badge-fidelidad.normal { background: #e0f2fe; color: #0369a1; }
-.badge-fidelidad.cerca { background: #fef3c7; color: #92400e; }
-.badge-fidelidad.listo { background: #f59e0b; color: white; animation: pulse 2s infinite; }
-@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-.info-fidelidad { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px; padding: 10px; background: #f0fdfa; border-radius: 8px; }
-.info-fidelidad .stat { flex: 1; min-width: 120px; text-align: center; padding: 10px; background: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-.info-fidelidad .stat .numero { font-size: 1.5rem; font-weight: bold; color: #0d9488; }
-.info-fidelidad .stat .etiqueta { font-size: 12px; color: #64748b; margin-top: 5px; }
-.progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 5px; }
-.progress-bar .fill { height: 100%; background: linear-gradient(90deg, #0d9488, #14b8a6); transition: width 0.3s; }
-.progress-bar .fill.completo { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
-.modal-overlay.visible { display: flex; }
-.modal-content { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-width: 450px; width: 90%; }
-.modal-content h3 { margin-top: 0; color: #0f766e; }
-.modal-content .importe-grande { font-size: 2.5rem; font-weight: bold; color: #10b981; text-align: center; margin: 15px 0; }
-.modal-content .cliente-info { text-align: center; color: #64748b; margin-bottom: 20px; }
-.metodos-pago { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
-.metodo-pago { padding: 15px; border: 2px solid #d1d5db; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.2s; background: white; }
-.metodo-pago:hover { border-color: #0d9488; background: #f0fdfa; }
-.metodo-pago.selected { border-color: #0d9488; background: #d1fae5; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2); }
-.metodo-pago .icono { font-size: 1.8rem; display: block; margin-bottom: 5px; }
-.metodo-pago .nombre { font-weight: bold; color: #374151; }
-.modal-botones { display: flex; gap: 10px; margin-top: 20px; }
-.modal-botones button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; }
-.modal-botones .btn-confirmar { background: #10b981; color: white; }
-.modal-botones .btn-confirmar:hover { background: #059669; }
-.modal-botones .btn-cancelar { background: #6b7280; color: white; }
-.modal-botones .btn-cancelar:hover { background: #4b5563; }
-input:disabled, select:disabled, textarea:disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
-.duracion-container.deshabilitado { opacity: 0.5; pointer-events: none; }
-.duracion-container.activo { opacity: 1; pointer-events: auto; }
-#label-gratis.deshabilitado { opacity: 0.5; pointer-events: none; }
-#label-gratis.activo { opacity: 1; pointer-events: auto; }
-button.btn:disabled { background: #9ca3af; cursor: not-allowed; }
-.filtros-listado { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-.filtros-listado input, .filtros-listado select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-.filtros-listado label { display: block; margin-bottom: 5px; font-weight: bold; color: #0f766e; font-size: 14px; }
-.horario-visualizador { margin: 20px 0; padding: 20px; background: #f8fafc; border-radius: 8px; border: 2px solid #e2e8f0; transition: all 0.3s; }
-.horario-visualizador.activo { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2); }
-.horario-visualizador h4 { margin-top: 0; color: #0f766e; margin-bottom: 15px; }
-.horario-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
-.horario-slot { padding: 8px 4px; text-align: center; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; position: relative; }
-.horario-slot.libre { background: #d1fae5; color: #065f46; border-color: #10b981; }
-.horario-slot.libre:hover { background: #a7f3d0; transform: scale(1.05); }
-.horario-slot.ocupado { background: #fee2e2; color: #991b1b; border-color: #ef4444; cursor: not-allowed; opacity: 0.7; }
-.horario-slot.limpieza { background: #fef3c7; color: #92400e; border-color: #f59e0b; cursor: not-allowed; opacity: 0.8; }
-.horario-slot.limpieza::after { content: ''; position: absolute; top: 2px; right: 2px; font-size: 10px; }
-.horario-slot.seleccionado { background: #059669 !important; color: white !important; border-color: #047857 !important; font-weight: bold; box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.3); transform: scale(1.05); }
-.horario-slot.seleccionado:hover { background: #047857 !important; }
-.horario-leyenda { display: flex; gap: 20px; margin-top: 15px; justify-content: center; flex-wrap: wrap; }
-.horario-leyenda-item { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-.horario-leyenda-color { width: 20px; height: 20px; border-radius: 4px; border: 2px solid; }
-.horario-leyenda-color.libre { background: #d1fae5; border-color: #10b981; }
-.horario-leyenda-color.ocupado { background: #fee2e2; border-color: #ef4444; }
-.horario-leyenda-color.limpieza { background: #fef3c7; border-color: #f59e0b; }
-.horario-leyenda-color.seleccionado { background: #059669; border-color: #047857; }
-.alerta-solapamiento { background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; margin: 10px 0; border-radius: 4px; display: none; }
-.alerta-solapamiento.visible { display: block; animation: shake 0.5s; }
-@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-#t1 { cursor: pointer; transition: all 0.2s; border: 2px dashed #0d9488 !important; }
-#t1:hover:not(:disabled) { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1); background-color: #d1fae5 !important; }
-.hora-hint { font-size: 12px; color: #64748b; margin-top: -5px; margin-bottom: 10px; font-style: italic; }
-.busqueda-rapida { margin-bottom: 15px; }
-.busqueda-rapida input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; }
-.busqueda-rapida input:focus { border-color: #0d9488; outline: none; }
-.stats-historico { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
-.stat-hist { background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #0d9488; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-.stat-hist h4 { margin: 0 0 8px 0; color: #64748b; font-size: 13px; }
-.stat-hist .valor { font-size: 1.8rem; font-weight: bold; color: #0d9488; }
-.stat-hist.noshows { border-left-color: #ef4444; }
-.stat-hist.noshows .valor { color: #ef4444; }
-.resumen-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
-.resumen-item { text-align: center; padding: 10px; }
-.resumen-label { font-size: 14px; color: #64748b; margin-bottom: 8px; font-weight: bold; }
-.resumen-valor { font-size: 2.5rem; font-weight: bold; }
-.resumen-valor-small { font-size: 1.2rem; font-weight: bold; }
-.banner-instalacion {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
-    color: white;
-    padding: 20px;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
-    z-index: 3000;
-    display: none;
-    animation: slideUp 0.3s ease-out;
-}
-@keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-}
-.banner-instalacion .contenido-banner {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    flex-wrap: wrap;
-}
-.banner-instalacion .texto-banner { flex: 1; min-width: 200px; }
-.banner-instalacion .texto-banner h3 { margin: 0 0 5px 0; font-size: 18px; }
-.banner-instalacion .texto-banner p { margin: 0; font-size: 14px; opacity: 0.9; }
-.banner-instalacion .botones-banner { display: flex; gap: 10px; align-items: center; }
-.banner-instalacion .btn-instalar { background: white; color: #0d9488; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.3s; }
-.banner-instalacion .btn-instalar:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-.banner-instalacion .btn-cerrar-banner { background: transparent; color: white; border: 2px solid white; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.3s; }
-.banner-instalacion .btn-cerrar-banner:hover { background: rgba(255,255,255,0.2); }
-@media (max-width: 767px) {
-    body { font-size: 17px !important; }
-    .nav { padding: 8px !important; }
-    .nav button { font-size: 14px !important; padding: 10px 12px !important; }
-    .card { padding: 16px !important; }
-    button, button.btn { font-size: 16px !important; padding: 12px 18px !important; }
-    input, select, textarea { font-size: 16px !important; padding: 12px !important; }
-    .stat-box .amount { font-size: 2rem !important; }
-    h2 { font-size: 1.5rem !important; }
-    h3 { font-size: 1.2rem !important; }
-    table, th, td { font-size: 14px !important; padding: 10px !important; }
-    .logo { max-width: 100px !important; }
-    .reloj-hora { font-size: 18px !important; }
-    #btn-exportar, #btn-importar, #btn-reset { font-size: 12px !important; padding: 8px 12px !important; }
-    .resumen-grid { grid-template-columns: repeat(2, 1fr) !important; }
-    .resumen-valor { font-size: 2rem !important; }
-    .banner-instalacion .contenido-banner { flex-direction: column; text-align: center; }
-    .banner-instalacion .botones-banner { width: 100%; justify-content: center; }
-    #tb2 tr { display: block; background: white; border-radius: 10px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); border: 1px solid #e5e7eb; }
-    #tb2 tr td { display: block; padding: 6px 0 !important; border: none !important; text-align: left !important; font-size: 15px !important; }
-    #tb2 tr td:first-child { font-size: 17px !important; font-weight: bold; color: #0d9488; margin-bottom: 5px; }
-    #tb2 tr td:nth-child(2), #tb2 tr td:nth-child(3) { color: #64748b; }
-    #tb2 tr td:nth-child(4) { font-weight: bold; color: #0d9488; font-size: 16px !important; }
-    #tb2 tr td:last-child { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-    #tb2 tr td:last-child button { flex: 1; min-width: 80px; padding: 10px 12px !important; font-size: 14px !important; text-align: center; }
-    #tb2 thead { display: none; }
-}
-@media (max-width: 479px) { 
-    .header { padding: 5px; } 
-    .logo { max-width: 60px; } 
-    .main { padding: 5px; } 
-    .card { padding: 10px; } 
-}
-</style>
 </head>
 <body>
-<div id="banner-instalacion" class="banner-instalacion">
-    <div class="contenido-banner">
-        <div class="texto-banner">
-            <h3>📱 Instala la App</h3>
-            <p><strong>Importante:</strong> Instala la aplicación para que funcione como una app real, sin barra de navegador y sin riesgo de salir accidentalmente.</p>
-        </div>
-        <div class="botones-banner">
-            <button class="btn-instalar" onclick="instalarApp()">📲 Instalar Ahora</button>
-            <button class="btn-cerrar-banner" onclick="cerrarBannerInstalacion()">✕ Más tarde</button>
-        </div>
-    </div>
-</div>
 <div class="header">
-    <div class="header-izquierda">
-        <div class="header-sync">☁️ Sincronización activa</div>
-    </div>
-    <div class="header-centro">
-        <img src="https://i.imgur.com/0PowleW.png" alt="Manos de Luz" class="logo">
-        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Quiromasaje Tarragona - Sistema de Gestión</p>
-    </div>
-    <div class="header-derecha">
-        <div class="reloj-fecha" id="reloj-fecha"></div>
-        <div class="reloj-hora" id="reloj-hora"></div>
-    </div>
+<h1>Manos de Luz - Gestión</h1>
+<div class="reloj">
+<div id="reloj-fecha"></div>
+<div id="reloj-hora"></div>
+</div>
 </div>
 <div class="nav">
-<button id="b1" class="active">📊 Resumen</button>
-<button id="b2">📅 Agenda</button>
-<button id="b3">👥 Clientes</button>
-<button id="b4">💰 Caja</button>
-<button id="b6">📜 Histórico</button>
-<button id="b7">💵 Tarifas</button>
-<button id="b8">📋 Auditoría</button>
-<button id="btn-exportar" style="float:right;background:#059669;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">💾 Copia</button>
-<button id="btn-importar" style="float:right;background:#8b5cf6;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">📥 Importar</button>
-<button id="btn-reset" style="float:right;background:#ef4444;color:white;border-radius:4px;padding:8px 16px;margin-right:5px;">🗑️ Resetear</button>
+<button id="b1" class="active" onclick="cambiar(1)"> Inicio</button>
+<button id="b2" onclick="cambiar(2)">📅 Citas</button>
+<button id="b3" onclick="cambiar(3)">👥 Clientes</button>
+<button id="b4" onclick="cambiar(4)">💰 Caja</button>
+<button id="b7" onclick="cambiar(5)">💲 Tarifas</button>
+<button id="b6" onclick="cambiar(6)">📊 Histórico</button>
+<button id="b8" onclick="cambiar(8)">🔍 Auditoría</button>
+<button id="b5" onclick="cambiar(7)">⚙️ Config</button>
 </div>
-<input type="file" id="input-importar" accept=".json" style="display:none;">
-<div class="main">
-<div id="s1" class="section active">
-<h2>Resumen del Día</h2>
-<div class="card">
-<div class="resumen-grid">
-    <div class="resumen-item">
-        <div class="resumen-label">Total clientes</div>
-        <div class="resumen-valor" id="n1" style="color:#0d9488;">0</div>
-    </div>
-    <div class="resumen-item">
-        <div class="resumen-label">Citas hoy</div>
-        <div class="resumen-valor" id="n2" style="color:#3b82f6;">0</div>
-    </div>
-    <div class="resumen-item">
-        <div class="resumen-label">Próxima cita</div>
-        <div class="resumen-valor-small" id="n3" style="color:#8b5cf6;">Ninguna</div>
-    </div>
-    <div class="resumen-item">
-        <div class="resumen-label">Cobros hoy</div>
-        <div class="resumen-valor" id="n4" style="color:#10b981;">0€</div>
-    </div>
-</div>
+<div id="s1" class="seccion active">
+<div class="stats">
+<div class="stat-card"><div class="numero" id="n1">0</div><div class="etiqueta">Clientes</div></div>
+<div class="stat-card"><div class="numero" id="n2">0</div><div class="etiqueta">Citas hoy</div></div>
+<div class="stat-card"><div class="numero" id="n3">-</div><div class="etiqueta">Próxima cita</div></div>
+<div class="stat-card"><div class="numero" id="n4">0€</div><div class="etiqueta">Caja hoy</div></div>
 </div>
 <div class="card">
-<h3>Próximas citas (hoy)</h3>
+<h2>📅 Próximas citas de hoy</h2>
 <div id="dc"></div>
 </div>
 </div>
-<div id="s2" class="section">
-<h2>Agenda</h2>
+<div id="s2" class="seccion">
 <div class="card" id="card-cita">
-<h3>Nueva Cita</h3>
+<h2>📅 Nueva Cita</h2>
 <form id="f1">
-<input type="date" id="d1" required onchange="onFechaHoraChange()">
-<label><strong>🛏️ Camilla:</strong></label>
-<select id="masajista" required onchange="onMasajistaChange()" style="background:#f0fdfa;font-weight:bold;">
-    <option value="">Selecciona camilla...</option>
-    <option value="Camilla1" selected>Camilla 1</option>
-    <option value="Camilla2">Camilla 2</option>
+<div class="form-row">
+<div class="form-group"><label>Fecha</label><input type="date" id="d1" required></div>
+<div class="form-group"><label>Hora</label><input type="time" id="t1" required></div>
+</div>
+<div class="form-group"><label>Camilla</label>
+<select id="masajista" required>
+<option value="Camilla1">Camilla 1 (Luz)</option>
+<option value="Camilla2">Camilla 2 (Laura)</option>
 </select>
-<input type="text" id="t1" readonly placeholder="👇 Primero selecciona fecha y camilla" 
-       style="cursor: pointer; background-color: #f0fdfa; text-align: center; font-weight: bold;" 
-       onclick="abrirSelectorHoras()">
-<p class="hora-hint">💡 Cada camilla tiene su propia disponibilidad. Las dos pueden atender a la misma hora.</p>
-<div id="visualizador-horarios" class="horario-visualizador" style="display:none;">
-    <h4>📅 Horarios disponibles para <span id="fecha-seleccionada"></span></h4>
-    <div class="horario-grid" id="horario-grid"></div>
-    <div class="horario-leyenda">
-        <div class="horario-leyenda-item"><div class="horario-leyenda-color libre"></div><span>Disponible</span></div>
-        <div class="horario-leyenda-item"><div class="horario-leyenda-color seleccionado"></div><span>Seleccionado</span></div>
-        <div class="horario-leyenda-item"><div class="horario-leyenda-color limpieza"></div><span>🧹 Limpieza</span></div>
-        <div class="horario-leyenda-item"><div class="horario-leyenda-color ocupado"></div><span>🔒 Ocupado</span></div>
-    </div>
 </div>
-<div id="alerta-solapamiento" class="alerta-solapamiento">
-    <strong>⚠️ Conflicto de horario:</strong> <span id="mensaje-solapamiento"></span>
+<div id="visualizador-horarios">
+<h3>Horario disponible para <span id="fecha-seleccionada"></span></h3>
+<div id="horario-grid"></div>
 </div>
-<input type="text" id="c1" list="lista-clientes" placeholder="🔍 Escribe para buscar cliente..." required onchange="onClienteChange()" disabled style="background:#f0fdfa;">
-<datalist id="lista-clientes"></datalist>
-<div id="aviso-fidelidad" style="display:none;"></div>
-<label><strong>Tipo de Masaje:</strong></label>
-<select id="sv1" required onchange="onServicioChange()" disabled>
-    <option value="">Primero selecciona un cliente...</option>
-    <option value="Masaje relajante">Masaje relajante</option>
-    <option value="Masaje terapéutico">Masaje terapéutico</option>
-    <option value="Masaje descontracturante">Masaje descontracturante</option>
-    <option value="Masaje de Espalda">Masaje de Espalda</option>
-    <option value="Masaje de Piernas">Masaje de Piernas</option>
-    <option value="Masaje deportivo">Masaje deportivo</option>
-    <option value="Reflexología podal (RTP)">Reflexología podal (RTP)</option>
-</select>
-<label><strong>Duración:</strong></label>
-<div class="duracion-container deshabilitado" id="duracion-container">
-    <div class="duracion-option">
-        <input type="radio" id="dur60" name="duracion" value="60" onchange="onDuracionChange()" checked disabled>
-        <label for="dur60">60 minutos (1 punto)</label>
-    </div>
-    <div class="duracion-option">
-        <input type="radio" id="dur90" name="duracion" value="90" onchange="onDuracionChange()" disabled>
-        <label for="dur90">90 minutos (1.5 puntos)</label>
-    </div>
-    <div class="duracion-option">
-        <input type="radio" id="dur120" name="duracion" value="120" onchange="onDuracionChange()" disabled>
-        <label for="dur120">2 horas (2 puntos)</label>
-    </div>
+<div id="alerta-solapamiento"><span id="mensaje-solapamiento"></span></div>
+<div class="form-group"><label>Cliente</label><input type="text" id="c1" list="lista-clientes" required disabled onchange="onClienteChange()"><datalist id="lista-clientes"></datalist></div>
+<div class="form-group"><label>Servicio</label><select id="sv1" required disabled onchange="onServicioChange()"><option>Tipo de masaje...</option><option>Masaje relajante</option><option>Masaje terapéutico</option><option>Masaje descontracturante</option><option>Masaje de Espalda</option><option>Masaje de Piernas</option><option>Masaje deportivo</option><option>Reflexología podal (RTP)</option></select></div>
+<div id="duracion-container" class="deshabilitado">
+<label>Duración:</label>
+<label><input type="radio" name="duracion" value="60" id="dur60" disabled onchange="onDuracionChange()"> 60 min</label>
+<label><input type="radio" name="duracion" value="90" id="dur90" disabled onchange="onDuracionChange()"> 90 min</label>
+<label><input type="radio" name="duracion" value="120" id="dur120" disabled onchange="onDuracionChange()"> 120 min</label>
 </div>
-<div id="info-precio" class="info-precio" style="display:none;">
-    <strong>Precio de tarifa:</strong> <span id="precio-tarifa">0€</span> 
-    <span style="color:#6b7280;font-size:0.9rem;">(Puedes modificarlo manualmente)</span>
-</div>
-<label><strong>Precio Final:</strong></label>
-<div class="input-con-euro">
-    <input type="number" id="p1" placeholder="0.00" step="0.01" min="0" required disabled>
-</div>
-<label id="label-gratis" class="deshabilitado" style="display:flex;align-items:center;gap:10px;margin:10px 0;">
-    <input type="checkbox" id="esGratis" style="width:auto;margin:0;" disabled>
-    <strong>Es masaje GRATIS (fidelización)</strong>
-</label>
-<textarea id="nt1" placeholder="Notas adicionales..." disabled></textarea>
-<button type="submit" class="btn" id="btn-cita" disabled>Completa todos los campos para guardar</button>
-<button type="button" class="btn-cancelar" id="btn-cancelar-cita" style="display:none;">Cancelar edición</button>
+<div id="info-precio">Precio tarifa: <span id="precio-tarifa">0€</span></div>
+<div id="aviso-fidelidad"></div>
+<div class="form-group"><label>Precio (€)</label><input type="number" id="p1" step="0.01" min="0" required disabled></div>
+<label id="label-gratis" class="deshabilitado"><input type="checkbox" id="esGratis" disabled> Es masaje GRATIS (consume 10 puntos de fidelidad)</label>
+<div class="form-group"><label>Notas</label><textarea id="nt1" rows="2" disabled></textarea></div>
+<button type="submit" class="btn btn-primary" id="btn-cita" disabled>Completa todos los campos</button>
+<button type="button" class="btn btn-secondary" id="btn-cancelar-cita" style="display:none;" onclick="cancelarEdicionCita()">Cancelar</button>
 </form>
 </div>
 <div class="card">
-<table>
-<thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Camilla</th><th>Precio</th><th>Estado</th><th>Acciones</th></tr></thead>
-<tbody id="tb1"></tbody>
-</table>
+<h2>📋 Citas programadas</h2>
+<table><thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Camilla</th><th>Precio</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tb1"></tbody></table>
 </div>
 </div>
-<div id="s3" class="section">
-<h2>Clientes</h2>
-<div class="busqueda-container">
-    <label>🔍 Buscar:</label>
-    <input type="text" id="busqueda-clientes" placeholder="Escribe nombre, apellido o teléfono..." oninput="filtrarClientes()">
-    <span class="contador-resultados" id="contador-resultados"></span>
-</div>
+<div id="s3" class="seccion">
 <div class="card" id="card-cliente">
-<h3>Nuevo Cliente</h3>
+<h2>👥 Nuevo Cliente</h2>
 <form id="f2">
-<input type="text" id="nm1" placeholder="Nombre" required>
-<input type="tel" id="ph1" placeholder="Teléfono" required>
-<input type="email" id="em1" placeholder="Email">
-<textarea id="nt2" placeholder="Notas..."></textarea>
-<button type="submit" class="btn" id="btn-cliente">Guardar Cliente</button>
-<button type="button" class="btn-cancelar" id="btn-cancelar-cliente" style="display:none;" onclick="cancelarEdicionCliente()">Cancelar edición</button>
+<div class="form-group"><label>Nombre</label><input type="text" id="nm1" required></div>
+<div class="form-group"><label>Teléfono</label><input type="tel" id="ph1" required></div>
+<div class="form-group"><label>Email</label><input type="email" id="em1"></div>
+<div class="form-group"><label>Notas</label><textarea id="nt2" rows="2"></textarea></div>
+<button type="submit" class="btn btn-primary" id="btn-cliente">Guardar Cliente</button>
+<button type="button" class="btn btn-secondary" id="btn-cancelar-cliente" style="display:none;" onclick="cancelarEdicionCliente()">Cancelar</button>
 </form>
-</div>
-<div id="ficha-fidelidad" class="card" style="display:none;">
-    <h3>🎁 Programa de Fidelización</h3>
-    <div id="contenido-fidelidad"></div>
+<div id="ficha-fidelidad"><div id="contenido-fidelidad"></div></div>
 </div>
 <div class="card">
-<table>
-<thead><tr><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Puntos</th><th>Acciones</th></tr></thead>
-<tbody id="tb2"></tbody>
-</table>
+<h2>📋 Lista de Clientes</h2>
+<input type="text" id="busqueda-clientes" placeholder="🔍 Buscar por nombre o teléfono..." oninput="filtrarClientes()">
+<div id="contador-resultados"></div>
+<table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Puntos</th><th>Acciones</th></tr></thead><tbody id="tb2"></tbody></table>
 </div>
 </div>
-<div id="s4" class="section">
-<h2>Control de Caja y Estadísticas</h2>
-<div class="stats-caja">
-<div class="stat-box"><h4>Total Hoy</h4><div class="amount" id="caja-hoy">0€</div></div>
-<div class="stat-box efectivo"><h4>Efectivo</h4><div class="amount" id="caja-efectivo">0€</div></div>
-<div class="stat-box tarjeta"><h4>Tarjeta</h4><div class="amount" id="caja-tarjeta">0€</div></div>
-<div class="stat-box bizum"><h4>Bizum</h4><div class="amount" id="caja-bizum">0€</div></div>
-<div class="stat-box transferencia"><h4>Transferencia</h4><div class="amount" id="caja-transferencia">0€</div></div>
-<div class="stat-box pendiente"><h4>Pendiente de Cobro</h4><div class="amount" id="caja-pendiente">0€</div></div>
+<div id="s4" class="seccion">
+<div class="card">
+<h2>💰 Caja de Hoy</h2>
+<div class="stats">
+<div class="stat-card"><div class="numero" id="caja-hoy">0€</div><div class="etiqueta">Total hoy</div></div>
+<div class="stat-card"><div class="numero" id="caja-efectivo">0€</div><div class="etiqueta">Efectivo</div></div>
+<div class="stat-card"><div class="numero" id="caja-tarjeta">0€</div><div class="etiqueta">Tarjeta</div></div>
+<div class="stat-card"><div class="numero" id="caja-bizum">0€</div><div class="etiqueta">Bizum</div></div>
+<div class="stat-card"><div class="numero" id="caja-transferencia">0€</div><div class="etiqueta">Transferencia</div></div>
+<div class="stat-card"><div class="numero" id="caja-pendiente">0€</div><div class="etiqueta">Pendiente</div></div>
+</div>
 </div>
 <div class="card">
-<h3>Registrar Cobro</h3>
+<h2>💳 Registrar Cobro Manual</h2>
 <form id="f3">
-<input type="date" id="cb1" required>
-<div class="input-con-euro"><input type="number" id="cb2" placeholder="0.00" step="0.01" min="0" required></div>
-<select id="cb3" required>
-<option value="">Método de pago...</option>
-<option value="Efectivo">Efectivo</option>
-<option value="Tarjeta">Tarjeta</option>
-<option value="Bizum">Bizum</option>
-<option value="Transferencia">Transferencia</option>
-</select>
-<select id="cb4"><option value="">Cliente (opcional)...</option></select>
-<input type="text" id="cb5" placeholder="Concepto (ej: Masaje relajante)">
-<textarea id="cb6" placeholder="Notas..."></textarea>
-<button type="submit" class="btn">Registrar Cobro</button>
+<div class="form-row-3">
+<div class="form-group"><label>Fecha</label><input type="date" id="cb1" required></div>
+<div class="form-group"><label>Importe (€)</label><input type="number" id="cb2" step="0.01" min="0" required></div>
+<div class="form-group"><label>Método</label><select id="cb3" required><option value="">Seleccionar...</option><option>Efectivo</option><option>Tarjeta</option><option>Bizum</option><option>Transferencia</option></select></div>
+</div>
+<div class="form-group"><label>Cliente (opcional)</label><select id="cb4"></select></div>
+<div class="form-group"><label>Concepto</label><input type="text" id="cb5"></div>
+<div class="form-group"><label>Notas</label><textarea id="cb6" rows="2"></textarea></div>
+<button type="submit" class="btn btn-primary">Registrar Cobro</button>
 </form>
 </div>
 <div class="card">
-<h3>📈 Gráficos de Ingresos</h3>
-<div class="filtros-grafico">
+<h2> Movimientos de Caja</h2>
+<table><thead><tr><th>Fecha</th><th>Importe</th><th>Método</th><th>Cliente</th><th>Concepto</th><th>Acciones</th></tr></thead><tbody id="tb3"></tbody></table>
+</div>
+<div class="card">
+<h2>📈 Gráficos de Ingresos</h2>
+<div class="filtros-container">
 <label><strong>Período:</strong></label>
-<select id="grafico-periodo" onchange="cambiarGrafico()">
-<option value="mes" selected>Por Mes</option>
-<option value="año">Por Año</option>
-</select>
-<div id="filtro-mes" class="mes-selector">
-<select id="grafico-mes" onchange="actualizarGraficos()">
-<option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option>
-<option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option>
-<option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option>
-<option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
-</select>
+<select id="grafico-periodo" onchange="cambiarGrafico()"><option value="mes">Por Mes</option><option value="año">Por Año</option></select>
+<div id="filtro-mes" style="display:flex;gap:10px;">
+<select id="grafico-mes" onchange="actualizarGraficos()"><option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option><option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option><option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option><option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option></select>
 <select id="grafico-anio" onchange="actualizarGraficos()"></select>
 </div>
-<div id="filtro-anio" style="display:none;"><select id="grafico-anio2" onchange="actualizarGraficos()"></select></div>
+<select id="grafico-anio2" onchange="actualizarGraficos()" style="display:none;"></select>
 </div>
 <div class="grafico-container"><canvas id="graficoIngresos"></canvas></div>
-<div class="grafico-container"><canvas id="graficoMetodos"></canvas></div>
+<div class="grafico-container-pequeno"><canvas id="graficoMetodos"></canvas></div>
 </div>
+</div>
+<div id="s5" class="seccion">
 <div class="card">
-<h3>📋 Listado de Masajes Realizados</h3>
-<div class="busqueda-rapida">
-    <input type="text" id="busqueda-masajes" placeholder="🔍 Buscar en el listado..." oninput="actualizarListadoMasajes()">
+<h2>💲 Gestión de Tarifas</h2>
+<p style="color:#64748b;margin-bottom:15px;">Modifica los precios de los servicios. Los cambios se aplican automáticamente a las nuevas citas.</p>
+<div id="tabla-tarifas"></div>
+<button class="btn btn-primary" onclick="guardarTarifas()">💾 Guardar Tarifas</button>
+<button class="btn btn-warning" onclick="cargarTarifasPorDefecto()">🔄 Restaurar precios por defecto</button>
 </div>
-<div class="filtros-listado">
-    <div><label>Fecha inicio:</label><input type="date" id="filtro-fecha-inicio" onchange="actualizarListadoMasajes()"></div>
-    <div><label>Fecha fin:</label><input type="date" id="filtro-fecha-fin" onchange="actualizarListadoMasajes()"></div>
-    <div><label>Cliente:</label><select id="filtro-cliente" onchange="actualizarListadoMasajes()"><option value="">Todos</option></select></div>
-    <div><label>Servicio:</label><select id="filtro-servicio" onchange="actualizarListadoMasajes()">
-        <option value="">Todos</option>
-        <option value="Masaje relajante">Masaje relajante</option>
-        <option value="Masaje terapéutico">Masaje terapéutico</option>
-        <option value="Masaje descontracturante">Masaje descontracturante</option>
-        <option value="Masaje de Espalda">Masaje de Espalda</option>
-        <option value="Masaje de Piernas">Masaje de Piernas</option>
-        <option value="Masaje deportivo">Masaje deportivo</option>
-        <option value="Reflexología podal (RTP)">Reflexología podal (RTP)</option>
-    </select></div>
 </div>
-<table>
-    <thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Camilla</th><th>Duración</th><th>Precio</th><th>Método</th><th>Estado</th></tr></thead>
-    <tbody id="tb-listado-masajes"></tbody>
-</table>
-</div>
+<div id="s6" class="seccion">
 <div class="card">
-<h3>Movimientos de Caja</h3>
-<table>
-<thead><tr><th>Fecha</th><th>Importe</th><th>Método</th><th>Cliente</th><th>Concepto</th><th>Acciones</th></tr></thead>
-<tbody id="tb3"></tbody>
-</table>
+<h2>📊 Histórico de Citas</h2>
+<div class="filtros-container">
+<input type="date" id="hist-filtro-inicio" title="Fecha inicio">
+<input type="date" id="hist-filtro-fin" title="Fecha fin">
+<select id="hist-filtro-cliente"><option value="">Todos los clientes</option></select>
+<select id="hist-filtro-servicio"><option value="">Todos los servicios</option><option>Masaje relajante</option><option>Masaje terapéutico</option><option>Masaje descontracturante</option><option>Masaje de Espalda</option><option>Masaje de Piernas</option><option>Masaje deportivo</option><option>Reflexología podal (RTP)</option></select>
+<input type="text" id="hist-busqueda" placeholder="🔍 Buscar...">
+</div>
+<div class="stats">
+<div class="stat-card"><div class="numero" id="hist-contador">0</div><div class="etiqueta">Citas</div></div>
+<div class="stat-card"><div class="numero" id="hist-total">0€</div><div class="etiqueta">Total cobrado</div></div>
+<div class="stat-card"><div class="numero" id="hist-noshows">0</div><div class="etiqueta">No Shows</div></div>
+</div>
+<table><thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Camilla</th><th>Duración</th><th>Precio</th><th>Método</th><th>Estado</th></tr></thead><tbody id="tb-historico"></tbody></table>
 </div>
 </div>
-<div id="s6" class="section">
-<h2>📜 Histórico de Citas</h2>
-<div class="stats-historico">
-    <div class="stat-hist"><h4>Total citas pasadas</h4><div class="valor" id="hist-contador">0</div></div>
-    <div class="stat-hist"><h4>Total cobrado</h4><div class="valor" id="hist-total">0€</div></div>
-    <div class="stat-hist noshows"><h4>No shows (hoy)</h4><div class="valor" id="hist-noshows">0</div></div>
-</div>
+<div id="s7" class="seccion">
 <div class="card">
-    <h3>Filtros</h3>
-    <div class="filtros-listado">
-        <div><label>Fecha inicio:</label><input type="date" id="hist-filtro-inicio"></div>
-        <div><label>Fecha fin:</label><input type="date" id="hist-filtro-fin"></div>
-        <div><label>Cliente:</label><select id="hist-filtro-cliente"><option value="">Todos</option></select></div>
-        <div><label>Servicio:</label><select id="hist-filtro-servicio">
-            <option value="">Todos</option>
-            <option value="Masaje relajante">Masaje relajante</option>
-            <option value="Masaje terapéutico">Masaje terapéutico</option>
-            <option value="Masaje descontracturante">Masaje descontracturante</option>
-            <option value="Masaje de Espalda">Masaje de Espalda</option>
-            <option value="Masaje de Piernas">Masaje de Piernas</option>
-            <option value="Masaje deportivo">Masaje deportivo</option>
-            <option value="Reflexología podal (RTP)">Reflexología podal (RTP)</option>
-        </select></div>
-    </div>
-    <div class="busqueda-rapida">
-        <input type="text" id="hist-busqueda" placeholder="🔍 Buscar en el histórico...">
-    </div>
+<h2>⚙️ Configuración</h2>
+<h3>📦 Copia de Seguridad</h3>
+<p style="color:#64748b;margin-bottom:10px;">Exporta todos los datos a un archivo JSON para tener una copia de seguridad.</p>
+<button class="btn btn-primary" id="btn-exportar">📥 Exportar datos</button>
+<button class="btn btn-secondary" id="btn-importar"> Importar datos</button>
+<input type="file" id="input-importar" accept=".json" style="display:none;">
+<h3 style="margin-top:20px;">⚠️ Zona Peligrosa</h3>
+<p style="color:#64748b;margin-bottom:10px;">Borra datos de la base de datos. Esta acción no se puede deshacer.</p>
+<button class="btn btn-danger" id="btn-reset">🗑️ Resetear Base de Datos</button>
 </div>
+</div>
+<div id="s8" class="seccion">
 <div class="card">
-<table>
-<thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Camilla</th><th>Duración</th><th>Precio</th><th>Método</th><th>Estado</th></tr></thead>
-<tbody id="tb-historico"></tbody>
-</table>
+<h2>🔍 Registro de Auditoría</h2>
+<p style="color:#64748b;margin-bottom:15px;">Registro permanente de todas las eliminaciones realizadas en el sistema.</p>
+<div class="stats">
+<div class="stat-card"><div class="numero" id="contador-auditoria">0</div><div class="etiqueta">Registros</div></div>
+</div>
+<table><thead><tr><th>Fecha Eliminación</th><th>Cliente</th><th>Servicio</th><th>Precio</th><th>Estado Pago</th><th>Motivo</th></tr></thead><tbody id="tb-auditoria"></tbody></table>
 </div>
 </div>
-<div id="s5" class="section">
-<h2>Configuración de Tarifas</h2>
-<div class="card">
-<h3>💵 Precios por Tipo de Masaje y Duración</h3>
-<table class="tabla-precios">
-<thead><tr><th>Tipo de Masaje</th><th>60 min</th><th>90 min</th><th>120 min</th></tr></thead>
-<tbody>
-<tr><td><strong>Masaje relajante</strong></td>
-<td><div class="input-con-euro"><input type="number" id="precio_relajante_60" step="1" min="0" onchange="guardarTarifas()"></div></td>
-<td><div class="input-con-euro"><input type="number" id="precio_relajante_90" step="1" min="0" onchange="guardarTarifas()"></div></td>
-<td><div class="input-con-euro"><input type="number" id="precio_relajante_120" step="1" min="0" onchange="guardarTarifas()"></div></td></tr>
-<tr><td><strong>Masaje terapéutico</strong></td>
-<td><div class="input-con-euro"><input type="number" id="precio_terapeutico_60" step="1" min="0" onchange="guardarTarifas()"></div></td>
-<td><div class="input-con-euro"><input type="number" id="precio_terapeutico_90" step="1" min="0" onchange="guardarTarifas()"></div></td>
-<td><div class="input-con-euro"><input type="number" id="precio_terapeutico_120" step="1" min="0" onchange="guardarTarifas()"></div></td></tr>
-<tr><td><strong>Masaje descontracturante</strong></td>
-<td><div class="input-con-euro"><input type="number" id="precio_descontracturante_60" step="1" min="0" onchange="guardarTarifas()"></div></td>
-<td><div class="input-con-euro"><input type="number" id="precio_descontracturante_90" step="1" min="0" onchange="guardarTarifas()"></div></td>
-<td><div class="input-con-euro"><input type="number" id="precio_descontracturante_120" step="1" min="0" onchange="guardarTarifas()"></div></td></tr>
-<tr><td><strong>Masaje de Espalda</strong></td>
-<td><div class="input-con-euro"><input type="number" id="precio_espalda_60" step="1" min="0" onchange="guardarTarifas()"></div></td>
-<td><div class="input-con-euro"><input type="number" id="precio_espalda_90" step="1" min="0" onchange="guardarTarifas()"></div></td>
-<td><div class="input-con-euro"><input type="number" id="precio_espalda_120" step="1" min="0" onchange="guardarTarifas()"></div></td></tr>
-<tr><td><strong>Masaje de Piernas</strong></td>
-<td><div class="input-con-euro"><input type="number" id="precio_piernas_60" step="1" min="0" onchange="guardarTarifas()"></div></td>
-<td><div class="input-con-euro"><input type="number" id="precio_piernas_90" step="1" min="0" onchange="guardarTarifas()"></div></td>
-<td><div class="input-con-euro"><input type="number" id="precio_piernas_120" step="1" min="0" onchange="guardarTarifas()"></div></td></tr>
-<tr><td><strong>Masaje deportivo</strong></td>
-<td><div class="input-con-euro"><input type="number" id="precio_deportivo_60" step="1" min="0" onchange="guardarTarifas()"></div></td>
-<td><div class="input-con-euro"><input type="number" id="precio_deportivo_90" step="1" min="0" onchange="guardarTarifas()"></div></td>
-<td><div class="input-con-euro"><input type="number" id="precio_deportivo_120" step="1" min="0" onchange="guardarTarifas()"></div></td></tr>
-<tr><td><strong>Reflexología podal (RTP)</strong></td>
-<td><div class="input-con-euro"><input type="number" id="precio_rtp_60" step="1" min="0" onchange="guardarTarifas()"></div></td>
-<td><div class="input-con-euro"><input type="number" id="precio_rtp_90" step="1" min="0" onchange="guardarTarifas()"></div></td>
-<td><div class="input-con-euro"><input type="number" id="precio_rtp_120" step="1" min="0" onchange="guardarTarifas()"></div></td></tr>
-</tbody>
-</table>
-<button class="btn" onclick="cargarTarifasPorDefecto()" style="background:#6b7280; margin-top:20px;">🔄 Restaurar precios por defecto</button>
-</div>
-</div>
-<div id="s8" class="section">
-<h2>📋 Registro de Auditoría</h2>
-<div class="card">
-    <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:15px;border-radius:8px;margin-bottom:20px;">
-        <strong>⚠️ Información importante:</strong>
-        <p style="margin:10px 0 0 0;color:#64748b;">Aquí se registran <strong>TODAS las eliminaciones de citas</strong> de forma permanente. Este registro no se puede borrar desde la aplicación y sirve para tener constancia de cualquier eliminación, especialmente si la cita estaba cobrada.</p>
-    </div>
-    <div style="margin-bottom:15px;">
-        <strong>Total de registros:</strong> <span id="contador-auditoria" style="background:#0d9488;color:white;padding:4px 12px;border-radius:12px;">0</span>
-    </div>
-    <table>
-        <thead>
-            <tr>
-                <th>Fecha/Hora Eliminación</th>
-                <th>Cliente</th>
-                <th>Servicio / Cita</th>
-                <th>Precio</th>
-                <th>Estado Pago</th>
-                <th>Motivo / Usuario</th>
-            </tr>
-        </thead>
-        <tbody id="tb-auditoria"></tbody>
-    </table>
+<div id="modal-cobro">
+<div class="modal-content">
+<h3>💳 Registrar Cobro</h3>
+<div id="modal-cliente-info" style="margin-bottom:15px;padding:10px;background:#f0fdfa;border-radius:6px;"></div>
+<div style="text-align:center;margin-bottom:20px;"><strong style="font-size:1.5rem;color:#0d9488;">Importe: <span id="modal-importe">0€</span></strong></div>
+<h4 style="margin-bottom:10px;">Método de pago:</h4>
+<div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)">💵 Efectivo</div>
+<div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)">💳 Tarjeta</div>
+<div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)">📱 Bizum</div>
+<div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"> Transferencia</div>
+<div style="margin-top:20px;display:flex;gap:10px;">
+<button class="btn btn-primary" style="flex:1;" onclick="confirmarCobro()">✅ Confirmar Cobro</button>
+<button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalCobro()">❌ Cancelar</button>
 </div>
 </div>
 </div>
-<div id="estado" class="estado-guardado">💾 Guardado en la nube</div>
-<div id="modal-cobro" class="modal-overlay">
-    <div class="modal-content">
-        <h3>💰 Registrar Cobro</h3>
-        <div class="cliente-info" id="modal-cliente-info"></div>
-        <div class="importe-grande" id="modal-importe">0€</div>
-        <p style="text-align:center;color:#64748b;margin-bottom:10px;"><strong>Selecciona método de pago:</strong></p>
-        <div class="metodos-pago">
-            <div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)"><span class="icono">💵</span><span class="nombre">Efectivo</span></div>
-            <div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)"><span class="icono">💳</span><span class="nombre">Tarjeta</span></div>
-            <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)"><span class="icono">📱</span><span class="nombre">Bizum</span></div>
-            <div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"><span class="icono">🏦</span><span class="nombre">Transferencia</span></div>
-        </div>
-        <div class="modal-botones">
-            <button class="btn-cancelar" onclick="cerrarModalCobro()">Cancelar</button>
-            <button class="btn-confirmar" onclick="confirmarCobro()">Confirmar Cobro</button>
-        </div>
-    </div>
+<div id="banner-instalacion">
+<strong>📱 Instala Manos de Luz en tu dispositivo</strong><br>
+<button onclick="instalarApp()">Instalar</button>
+<button onclick="cerrarBannerInstalacion()">Ahora no</button>
 </div>
+<div id="estado"></div>
 </body>
 </html>
