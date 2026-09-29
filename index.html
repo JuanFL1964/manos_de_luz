@@ -125,6 +125,14 @@ tr.gratis { background: #fef3c7; }
 #label-gratis { margin-top: 10px; display: inline-block; padding: 10px; background: #f0fdfa; border-radius: 6px; cursor: pointer; }
 #label-gratis.deshabilitado { opacity: 0.5; cursor: not-allowed; }
 #label-gratis.activo { opacity: 1; cursor: pointer; }
+#modal-password { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+#modal-password.visible { display: flex; }
+#modal-password .modal-content { background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%; }
+#modal-password h3 { color: #0d9488; margin-bottom: 15px; }
+#modal-password input { width: 100%; padding: 12px; border: 2px solid #d1d5db; border-radius: 6px; font-size: 1rem; margin: 15px 0; }
+#modal-password input:focus { outline: none; border-color: #0d9488; }
+#modal-password .error { color: #ef4444; font-size: 0.9rem; margin-top: 10px; display: none; }
+#modal-password .error.visible { display: block; }
 @media (max-width: 768px) { .form-row, .form-row-3 { grid-template-columns: 1fr; } .stats { grid-template-columns: repeat(2, 1fr); } .info-fidelidad { grid-template-columns: 1fr; } table { font-size: 0.75rem; } th, td { padding: 6px 4px; } }
 </style>
 <script>
@@ -151,6 +159,9 @@ var metodoSeleccionado = null;
 var graficoIngresos = null;
 var graficoMetodos = null;
 var deferredPrompt = null;
+var PASSWORD_ADMIN = 'manos2026';
+var cobroEliminarPendiente = null;
+var intentosFallidos = 0;
 var CAMILLAS = ['Camilla1', 'Camilla2'];
 var COLORES_CAMILLAS = { 'Camilla1': '#ef4444', 'Camilla2': '#8b5cf6', 'Luz': '#ef4444', 'Laura': '#8b5cf6' };
 var tarifasPorDefecto = {
@@ -282,7 +293,7 @@ function resetearBaseDatos() {
     else resumen += '❌ Citas: SE MANTIENEN (' + citas.length + ' registros)\n';
     if (borrarCobros) resumen += '✅ Cobros: ' + cobros.length + ' registros\n';
     else resumen += '❌ Cobros: SE MANTIENEN (' + cobros.length + ' registros)\n';
-    resumen += '\nLas TARIFAS siempre se mantienen.\n\n️ ¿CONFIRMAR BORRADO?\n\n(SÍ = Borrar | NO = Cancelar)';
+    resumen += '\nLas TARIFAS siempre se mantienen.\n\n⚠️ ¿CONFIRMAR BORRADO?\n\n(SÍ = Borrar | NO = Cancelar)';
     var confirmarFinal = confirm(resumen);
     if (!confirmarFinal) { alert('❌ Operación cancelada. No se ha borrado nada.'); return; }
     var batch = db.batch();
@@ -294,7 +305,7 @@ function resetearBaseDatos() {
         var msg = '✅ Base de datos actualizada:\n\n';
         if (borrarClientes) msg += '🗑️ ' + contadores.clientes + ' clientes borrados\n';
         else msg += '✔️ ' + contadores.clientes + ' clientes mantenidos\n';
-        if (borrarCitas) msg += '️ ' + contadores.citas + ' citas borradas\n';
+        if (borrarCitas) msg += '🗑️ ' + contadores.citas + ' citas borradas\n';
         else msg += '✔️ ' + contadores.citas + ' citas mantenidas\n';
         if (borrarCobros) msg += '🗑️ ' + contadores.cobros + ' cobros borrados\n';
         else msg += '✔️ ' + contadores.cobros + ' cobros mantenidos\n';
@@ -307,7 +318,7 @@ function exportarDatos() {
     try {
         var d = { clientes: clientes, citas: citas, cobros: cobros, tarifas: tarifas, fecha: new Date().toISOString(), version: '2.0' };
         var jsonStr = JSON.stringify(d, null, 2);
-        if (jsonStr.length < 50) { alert('️ No hay datos'); return; }
+        if (jsonStr.length < 50) { alert('⚠️ No hay datos'); return; }
         var blob = new Blob([jsonStr], { type: 'application/json' });
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
@@ -600,7 +611,7 @@ function mostrarFichaFidelidad(clienteId) {
     html += '<input type="number" id="edit-puntos" value="' + puntos + '" step="0.5" min="0" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:16px;">';
     html += '</div>';
     html += '<button class="btn-regalo" onclick="guardarPuntosEditados(\'' + clienteId + '\')" style="width:100%;padding:12px;font-size:16px;">💾 Guardar cambios</button>';
-    html += '<button onclick="ocultarEditorFidelidad()" style="width:100%;padding:10px;margin-top:8px;background:#6b7280;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">✕ Cancelar</button>';
+    html += '<button onclick="ocultarEditorFidelidad()" style="width:100%;padding:10px;margin-top:8px;background:#6b7280;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;"> Cancelar</button>';
     html += '</div>';
     document.getElementById('contenido-fidelidad').innerHTML = html;
     document.getElementById('ficha-fidelidad').style.display = 'block';
@@ -724,7 +735,7 @@ function eliminarCita(id) {
         mensaje += '• Si la eliminas, se perderá el registro del cobro\n';
         mensaje += '• Asegúrate de que el cobro está registrado en Caja\n\n';
     } else {
-        mensaje += '️ NO MARCADA COMO COBRADA\n';
+        mensaje += '⚠️ NO MARCADA COMO COBRADA\n';
         mensaje += '⚠️ PUEDE HABER SIDO COBRADA EN EFECTIVO\n';
         mensaje += '• Si la eliminas, no quedará constancia del posible cobro\n';
         mensaje += '• Verifica si se cobró antes de eliminar\n\n';
@@ -772,12 +783,12 @@ function eliminarCita(id) {
                     batch.commit().then(function() {
                         console.log('✅ Cobro(s) eliminado(s):', cobrosAEliminar.length);
                     }).catch(function(err) {
-                        console.log('❌ Error al eliminar cobro:', err);
+                        console.log(' Error al eliminar cobro:', err);
                     });
                 }
             }
             db.collection('citas').doc(id).delete().then(function() {
-                mostrarEstado('️ Cita eliminada (registrada en auditoría)', 3000);
+                mostrarEstado('🗑️ Cita eliminada (registrada en auditoría)', 3000);
                 console.log('✅ Cita eliminada. Registro de auditoría:', registroAuditoria);
             }).catch(function(err) {
                 alert('❌ Error al eliminar cita: ' + err.message);
@@ -788,7 +799,47 @@ function eliminarCita(id) {
         });
     }
 }
-function eliminarCobro(id) { if(confirm('¿Eliminar?')) { db.collection('cobros').doc(id).delete(); mostrarEstado('🗑️ Eliminado', 2000); } }
+function eliminarCobro(id) {
+    cobroEliminarPendiente = id;
+    intentosFallidos = 0;
+    document.getElementById('password-input').value = '';
+    document.getElementById('password-error').classList.remove('visible');
+    document.getElementById('modal-password').classList.add('visible');
+    setTimeout(function() { document.getElementById('password-input').focus(); }, 100);
+}
+function verificarPasswordCobro() {
+    var password = document.getElementById('password-input').value;
+    if (password === PASSWORD_ADMIN) {
+        cerrarModalPassword();
+        if (cobroEliminarPendiente) {
+            db.collection('cobros').doc(cobroEliminarPendiente).delete();
+            mostrarEstado('🗑️ Cobro eliminado', 2000);
+            cobroEliminarPendiente = null;
+        }
+    } else {
+        intentosFallidos++;
+        document.getElementById('password-error').classList.add('visible');
+        document.getElementById('password-input').value = '';
+        document.getElementById('password-input').focus();
+        if (intentosFallidos >= 3) {
+            db.collection('auditoria').add({
+                accion: 'intento_eliminar_cobro_fallido',
+                fecha: new Date().toISOString(),
+                intentos: intentosFallidos,
+                usuario: 'Usuario local',
+                timestamp: Date.now()
+            });
+            alert('⚠️ 3 intentos fallidos. Acción registrada en auditoría.');
+            cerrarModalPassword();
+            intentosFallidos = 0;
+        }
+    }
+}
+function cerrarModalPassword() {
+    document.getElementById('modal-password').classList.remove('visible');
+    cobroEliminarPendiente = null;
+    intentosFallidos = 0;
+}
 function editarCliente(id) {
     var c = clientes.find(function(x) { return x.id === id; });
     if (!c) return;
@@ -1303,11 +1354,12 @@ window.onload = function() {
             document.getElementById('cb1').valueAsDate = new Date();
             mostrarEstado('✅ Cobro registrado', 2000);
         }).catch(function(err) {
-            alert('❌ Error al registrar cobro: ' + err.message);
+            alert(' Error al registrar cobro: ' + err.message);
         });
     };
     document.getElementById('t1').addEventListener('click', function(e) { if (!this.disabled && document.getElementById('d1').value && document.getElementById('masajista').value) abrirSelectorHoras(); });
     document.getElementById('modal-cobro').addEventListener('click', function(e) { if (e.target === this) cerrarModalCobro(); });
+    document.getElementById('modal-password').addEventListener('click', function(e) { if (e.target === this) cerrarModalPassword(); });
     document.getElementById('p1').addEventListener('input', function() { var btn = document.getElementById('btn-cita'); btn.disabled = !(this.value && parseFloat(this.value) > 0); btn.textContent = btn.disabled ? 'Introduce el precio' : 'Guardar Cita'; });
     document.getElementById('esGratis').addEventListener('change', aplicarLogicaGratis);
     document.getElementById('d1').addEventListener('change', onFechaHoraChange);
@@ -1345,8 +1397,8 @@ window.onload = function() {
 <button id="b2" onclick="cambiar(2)">📅 Citas</button>
 <button id="b3" onclick="cambiar(3)">👥 Clientes</button>
 <button id="b4" onclick="cambiar(4)">💰 Caja</button>
-<button id="b7" onclick="cambiar(5)"> Tarifas</button>
-<button id="b6" onclick="cambiar(6)">📊 Histórico</button>
+<button id="b7" onclick="cambiar(5)">💲 Tarifas</button>
+<button id="b6" onclick="cambiar(6)"> Histórico</button>
 <button id="b8" onclick="cambiar(8)">🔍 Auditoría</button>
 <button id="b5" onclick="cambiar(7)">⚙️ Config</button>
 </div>
@@ -1358,7 +1410,7 @@ window.onload = function() {
 <div class="stat-card"><div class="numero" id="n4">0€</div><div class="etiqueta">Caja hoy</div></div>
 </div>
 <div class="card">
-<h2> Próximas citas de hoy</h2>
+<h2>📅 Próximas citas de hoy</h2>
 <div id="dc"></div>
 </div>
 </div>
@@ -1479,13 +1531,13 @@ window.onload = function() {
 </div>
 <div id="s6" class="seccion">
 <div class="card">
-<h2>📊 Histórico de Citas</h2>
+<h2> Histórico de Citas</h2>
 <div class="filtros-container">
 <input type="date" id="hist-filtro-inicio" title="Fecha inicio">
 <input type="date" id="hist-filtro-fin" title="Fecha fin">
 <select id="hist-filtro-cliente"><option value="">Todos los clientes</option></select>
 <select id="hist-filtro-servicio"><option value="">Todos los servicios</option><option>Masaje relajante</option><option>Masaje terapéutico</option><option>Masaje descontracturante</option><option>Masaje de Espalda</option><option>Masaje de Piernas</option><option>Masaje deportivo</option><option>Reflexología podal (RTP)</option></select>
-<input type="text" id="hist-busqueda" placeholder=" Buscar...">
+<input type="text" id="hist-busqueda" placeholder="🔍 Buscar...">
 </div>
 <div class="stats">
 <div class="stat-card"><div class="numero" id="hist-contador">0</div><div class="etiqueta">Citas</div></div>
@@ -1497,15 +1549,15 @@ window.onload = function() {
 </div>
 <div id="s7" class="seccion">
 <div class="card">
-<h2>️ Configuración</h2>
+<h2>⚙️ Configuración</h2>
 <h3>📦 Copia de Seguridad</h3>
 <p style="color:#64748b;margin-bottom:10px;">Exporta todos los datos a un archivo JSON para tener una copia de seguridad.</p>
 <button class="btn btn-primary" id="btn-exportar">📥 Exportar datos</button>
-<button class="btn btn-secondary" id="btn-importar">📤 Importar datos</button>
+<button class="btn btn-secondary" id="btn-importar"> Importar datos</button>
 <input type="file" id="input-importar" accept=".json" style="display:none;">
 <h3 style="margin-top:20px;">⚠️ Zona Peligrosa</h3>
 <p style="color:#64748b;margin-bottom:10px;">Borra datos de la base de datos. Esta acción no se puede deshacer.</p>
-<button class="btn btn-danger" id="btn-reset">🗑️ Resetear Base de Datos</button>
+<button class="btn btn-danger" id="btn-reset">️ Resetear Base de Datos</button>
 </div>
 </div>
 <div id="s8" class="seccion">
@@ -1520,19 +1572,31 @@ window.onload = function() {
 </div>
 <div id="modal-cobro">
 <div class="modal-content">
-<h3>💳 Registrar Cobro</h3>
+<h3> Registrar Cobro</h3>
 <div id="modal-cliente-info" style="margin-bottom:15px;padding:10px;background:#f0fdfa;border-radius:6px;"></div>
 <div style="text-align:center;margin-bottom:20px;"><strong style="font-size:1.5rem;color:#0d9488;">Importe: <span id="modal-importe">0€</span></strong></div>
 <h4 style="margin-bottom:10px;">Método de pago:</h4>
 <div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)">💵 Efectivo</div>
-<div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)"> Tarjeta</div>
+<div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)">💳 Tarjeta</div>
 <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)">📱 Bizum</div>
-<div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"> Transferencia</div>
+<div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)">🏦 Transferencia</div>
 <div style="margin-top:20px;display:flex;gap:10px;">
 <button class="btn btn-primary" style="flex:1;" onclick="confirmarCobro()">✅ Confirmar Cobro</button>
-<button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalCobro()">❌ Cancelar</button>
+<button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalCobro()"> Cancelar</button>
 </div>
 </div>
+</div>
+<div id="modal-password">
+    <div class="modal-content">
+        <h3>🔒 Eliminación de Cobro</h3>
+        <p style="color:#64748b;margin-bottom:15px;">Introduce la contraseña de administrador para eliminar este cobro:</p>
+        <input type="password" id="password-input" placeholder="Contraseña..." onkeypress="if(event.key==='Enter') verificarPasswordCobro()">
+        <div id="password-error" class="error">❌ Contraseña incorrecta</div>
+        <div style="margin-top:20px;display:flex;gap:10px;">
+            <button class="btn btn-primary" style="flex:1;" onclick="verificarPasswordCobro()">✅ Confirmar</button>
+            <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalPassword()">❌ Cancelar</button>
+        </div>
+    </div>
 </div>
 <div id="banner-instalacion">
 <strong>📱 Instala Manos de Luz en tu dispositivo</strong><br>
