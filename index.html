@@ -233,6 +233,7 @@ function cambiar(n) {
     if(b) b.classList.add('active');
     if(n === 6) actualizarHistorico();
     if(n === 8) actualizarTablaAuditoria();
+    if(n === 5) cargarTarifasEnFormulario();
 }
 function mostrarBannerInstalacion() {
     var primeraVez = localStorage.getItem('primeraVisita');
@@ -300,7 +301,7 @@ function resetearBaseDatos() {
         msg += '\nLa página se recargará en 2 segundos.';
         alert(msg);
         setTimeout(function() { location.reload(); }, 2000);
-    }).catch(function(err) { alert(' Error al borrar: ' + err.message); });
+    }).catch(function(err) { alert('❌ Error al borrar: ' + err.message); });
 }
 function exportarDatos() {
     try {
@@ -371,7 +372,7 @@ function mostrarVisualizadorHorarios(fecha, masajista) {
             slot.textContent = timeStr;
             slot.dataset.hora = timeStr;
             var estado = verificarEstadoHorario(fecha, timeStr, masajista, null);
-            if (estado === 'ocupado') { slot.classList.add('ocupado'); slot.title = ' Ocupado'; }
+            if (estado === 'ocupado') { slot.classList.add('ocupado'); slot.title = '🔒 Ocupado'; }
             else if (estado === 'limpieza') { slot.classList.add('limpieza'); slot.title = '🧹 Limpieza'; }
             else { slot.classList.add('libre'); slot.title = '✅ Disponible'; slot.onclick = function() { seleccionarHoraDesdeVisualizador(this.dataset.hora); }; }
             if (timeStr === horaActual) slot.classList.add('seleccionado');
@@ -623,7 +624,7 @@ function guardarPuntosEditados(clienteId) {
         db.collection('clientes').doc(clienteId).update({ puntosFidelidad: nuevosPuntos }).then(function() {
             alert('✅ Puntos actualizados correctamente');
             mostrarFichaFidelidad(clienteId);
-        }).catch(function(err) { alert('Error al guardar: ' + err.message); });
+        }).catch(function(err) { alert('❌ Error al guardar: ' + err.message); });
     }
 }
 function getPuntosPorDuracion(duracion) { return duracion == 60 ? 1 : (duracion == 90 ? 1.5 : 2); }
@@ -687,7 +688,7 @@ function guardarCita(e) {
                     db.collection('clientes').doc(cliente.id).update({puntosFidelidad: nuevosPuntos});
                     if (acabaDeAlcanzar) {
                         setTimeout(function() { 
-                            alert(' ¡' + cliente.nombre + ' ha alcanzado los ' + nuevosPuntos.toFixed(1) + ' puntos!\n\nTIENE 1 MASAJE GRATIS DISPONIBLE'); 
+                            alert('🎉 ¡' + cliente.nombre + ' ha alcanzado los ' + nuevosPuntos.toFixed(1) + ' puntos!\n\nTIENE 1 MASAJE GRATIS DISPONIBLE'); 
                         }, 500);
                     }
                     mostrarEstado('✅ Cita guardada - +' + puntos + ' puntos (Total: ' + nuevosPuntos.toFixed(1) + ')', 2000);
@@ -709,7 +710,7 @@ function eliminarCita(id) {
     var cita = citas.find(function(c) { return c.id === id; });
     if (!cita) { alert('❌ No se encuentra la cita'); return; }
     var mensaje = '🚨 DANGER - ELIMINACIÓN DE CITA \n\n';
-    mensaje += ' DATOS DE LA CITA:\n';
+    mensaje += '📋 DATOS DE LA CITA:\n';
     mensaje += '• Cliente: ' + cita.cliente + '\n';
     mensaje += '• Fecha: ' + cita.fecha + '\n';
     mensaje += '• Hora: ' + cita.hora + '\n';
@@ -723,7 +724,7 @@ function eliminarCita(id) {
         mensaje += '• Si la eliminas, se perderá el registro del cobro\n';
         mensaje += '• Asegúrate de que el cobro está registrado en Caja\n\n';
     } else {
-        mensaje += '⚠️ NO MARCADA COMO COBRADA\n';
+        mensaje += '️ NO MARCADA COMO COBRADA\n';
         mensaje += '⚠️ PUEDE HABER SIDO COBRADA EN EFECTIVO\n';
         mensaje += '• Si la eliminas, no quedará constancia del posible cobro\n';
         mensaje += '• Verifica si se cobró antes de eliminar\n\n';
@@ -776,10 +777,10 @@ function eliminarCita(id) {
                 }
             }
             db.collection('citas').doc(id).delete().then(function() {
-                mostrarEstado('🗑️ Cita eliminada (registrada en auditoría)', 3000);
+                mostrarEstado('️ Cita eliminada (registrada en auditoría)', 3000);
                 console.log('✅ Cita eliminada. Registro de auditoría:', registroAuditoria);
             }).catch(function(err) {
-                alert('Error al eliminar cita: ' + err.message);
+                alert('❌ Error al eliminar cita: ' + err.message);
             });
         }).catch(function(err) {
             alert('❌ Error al crear registro de auditoría: ' + err.message);
@@ -1067,6 +1068,40 @@ function confirmarCobro() {
     mostrarEstado('✅ Cobro registrado', 2000);
 }
 function cerrarModalCobro() { document.getElementById('modal-cobro').classList.remove('visible'); cobroPendiente = null; metodoSeleccionado = null; }
+function generarTablaTarifas() {
+    if (document.getElementById('tabla-tarifas').innerHTML.trim() !== '') return;
+    var servicios = [
+        {id: 'relajante', nombre: 'Masaje relajante'},
+        {id: 'terapeutico', nombre: 'Masaje terapéutico'},
+        {id: 'descontracturante', nombre: 'Masaje descontracturante'},
+        {id: 'espalda', nombre: 'Masaje de Espalda'},
+        {id: 'piernas', nombre: 'Masaje de Piernas'},
+        {id: 'deportivo', nombre: 'Masaje deportivo'},
+        {id: 'rtp', nombre: 'Reflexología podal (RTP)'}
+    ];
+    var html = '<table><thead><tr><th>Servicio</th><th>60 min</th><th>90 min</th><th>120 min</th></tr></thead><tbody>';
+    servicios.forEach(function(serv) {
+        html += '<tr>';
+        html += '<td><strong>' + serv.nombre + '</strong></td>';
+        html += '<td><input type="number" id="precio_' + serv.id + '_60" step="0.01" min="0" style="width:80px;padding:5px;border:1px solid #d1d5db;border-radius:4px;"></td>';
+        html += '<td><input type="number" id="precio_' + serv.id + '_90" step="0.01" min="0" style="width:80px;padding:5px;border:1px solid #d1d5db;border-radius:4px;"></td>';
+        html += '<td><input type="number" id="precio_' + serv.id + '_120" step="0.01" min="0" style="width:80px;padding:5px;border:1px solid #d1d5db;border-radius:4px;"></td>';
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('tabla-tarifas').innerHTML = html;
+}
+function cargarTarifasEnFormulario() {
+    generarTablaTarifas();
+    var servicios = ['relajante', 'terapeutico', 'descontracturante', 'espalda', 'piernas', 'deportivo', 'rtp'];
+    var duraciones = ['60', '90', '120'];
+    servicios.forEach(function(serv) { 
+        duraciones.forEach(function(dur) { 
+            var input = document.getElementById('precio_' + serv + '_' + dur);
+            if (input) input.value = tarifas[serv + '_' + dur] || 0; 
+        }); 
+    });
+}
 function guardarTarifas() {
     var nuevosPrecios = {};
     var servicios = ['relajante', 'terapeutico', 'descontracturante', 'espalda', 'piernas', 'deportivo', 'rtp'];
@@ -1075,12 +1110,14 @@ function guardarTarifas() {
     db.collection('tarifas').doc('precios').set(nuevosPrecios);
     mostrarEstado('✅ Tarifas actualizadas', 2000);
 }
-function cargarTarifasEnFormulario() {
-    var servicios = ['relajante', 'terapeutico', 'descontracturante', 'espalda', 'piernas', 'deportivo', 'rtp'];
-    var duraciones = ['60', '90', '120'];
-    servicios.forEach(function(serv) { duraciones.forEach(function(dur) { document.getElementById('precio_' + serv + '_' + dur).value = tarifas[serv + '_' + dur] || 0; }); });
+function cargarTarifasPorDefecto() { 
+    if (confirm('¿Restaurar precios por defecto?')) { 
+        db.collection('tarifas').doc('precios').set(tarifasPorDefecto); 
+        document.getElementById('tabla-tarifas').innerHTML = '';
+        cargarTarifasEnFormulario();
+        mostrarEstado('✅ Precios restaurados', 2000); 
+    } 
 }
-function cargarTarifasPorDefecto() { if (confirm('¿Restaurar precios?')) { db.collection('tarifas').doc('precios').set(tarifasPorDefecto); mostrarEstado('✅ Precios restaurados', 2000); } }
 function actualizarListadoMasajes() {
     var fInicio = document.getElementById('filtro-fecha-inicio').value;
     var fFin = document.getElementById('filtro-fecha-fin').value;
@@ -1209,7 +1246,7 @@ function actualizarGraficos() {
 function actualizarTablaAuditoria() {
     var html = '';
     if (auditoria.length === 0) {
-        html = '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:30px;"> No hay registros de eliminaciones</td></tr>';
+        html = '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:30px;">📋 No hay registros de eliminaciones</td></tr>';
     } else {
         auditoria.forEach(function(reg) {
             var fechaEliminacion = reg.fecha ? new Date(reg.fecha).toLocaleString('es-ES') : '-';
@@ -1266,7 +1303,7 @@ window.onload = function() {
             document.getElementById('cb1').valueAsDate = new Date();
             mostrarEstado('✅ Cobro registrado', 2000);
         }).catch(function(err) {
-            alert('Error al registrar cobro: ' + err.message);
+            alert('❌ Error al registrar cobro: ' + err.message);
         });
     };
     document.getElementById('t1').addEventListener('click', function(e) { if (!this.disabled && document.getElementById('d1').value && document.getElementById('masajista').value) abrirSelectorHoras(); });
@@ -1304,11 +1341,11 @@ window.onload = function() {
 </div>
 </div>
 <div class="nav">
-<button id="b1" class="active" onclick="cambiar(1)"> Inicio</button>
+<button id="b1" class="active" onclick="cambiar(1)">🏠 Inicio</button>
 <button id="b2" onclick="cambiar(2)">📅 Citas</button>
 <button id="b3" onclick="cambiar(3)">👥 Clientes</button>
 <button id="b4" onclick="cambiar(4)">💰 Caja</button>
-<button id="b7" onclick="cambiar(5)">💲 Tarifas</button>
+<button id="b7" onclick="cambiar(5)"> Tarifas</button>
 <button id="b6" onclick="cambiar(6)">📊 Histórico</button>
 <button id="b8" onclick="cambiar(8)">🔍 Auditoría</button>
 <button id="b5" onclick="cambiar(7)">⚙️ Config</button>
@@ -1321,7 +1358,7 @@ window.onload = function() {
 <div class="stat-card"><div class="numero" id="n4">0€</div><div class="etiqueta">Caja hoy</div></div>
 </div>
 <div class="card">
-<h2>📅 Próximas citas de hoy</h2>
+<h2> Próximas citas de hoy</h2>
 <div id="dc"></div>
 </div>
 </div>
@@ -1399,6 +1436,20 @@ window.onload = function() {
 </div>
 </div>
 <div class="card">
+<h2>📈 Gráficos de Ingresos</h2>
+<div class="filtros-container">
+<label><strong>Período:</strong></label>
+<select id="grafico-periodo" onchange="cambiarGrafico()"><option value="mes">Por Mes</option><option value="año">Por Año</option></select>
+<div id="filtro-mes" style="display:flex;gap:10px;">
+<select id="grafico-mes" onchange="actualizarGraficos()"><option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option><option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option><option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option><option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option></select>
+<select id="grafico-anio" onchange="actualizarGraficos()"></select>
+</div>
+<select id="grafico-anio2" onchange="actualizarGraficos()" style="display:none;"></select>
+</div>
+<div class="grafico-container"><canvas id="graficoIngresos"></canvas></div>
+<div class="grafico-container-pequeno"><canvas id="graficoMetodos"></canvas></div>
+</div>
+<div class="card">
 <h2>💳 Registrar Cobro Manual</h2>
 <form id="f3">
 <div class="form-row-3">
@@ -1413,22 +1464,8 @@ window.onload = function() {
 </form>
 </div>
 <div class="card">
-<h2> Movimientos de Caja</h2>
+<h2>📋 Movimientos de Caja</h2>
 <table><thead><tr><th>Fecha</th><th>Importe</th><th>Método</th><th>Cliente</th><th>Concepto</th><th>Acciones</th></tr></thead><tbody id="tb3"></tbody></table>
-</div>
-<div class="card">
-<h2>📈 Gráficos de Ingresos</h2>
-<div class="filtros-container">
-<label><strong>Período:</strong></label>
-<select id="grafico-periodo" onchange="cambiarGrafico()"><option value="mes">Por Mes</option><option value="año">Por Año</option></select>
-<div id="filtro-mes" style="display:flex;gap:10px;">
-<select id="grafico-mes" onchange="actualizarGraficos()"><option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option><option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option><option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option><option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option></select>
-<select id="grafico-anio" onchange="actualizarGraficos()"></select>
-</div>
-<select id="grafico-anio2" onchange="actualizarGraficos()" style="display:none;"></select>
-</div>
-<div class="grafico-container"><canvas id="graficoIngresos"></canvas></div>
-<div class="grafico-container-pequeno"><canvas id="graficoMetodos"></canvas></div>
 </div>
 </div>
 <div id="s5" class="seccion">
@@ -1448,7 +1485,7 @@ window.onload = function() {
 <input type="date" id="hist-filtro-fin" title="Fecha fin">
 <select id="hist-filtro-cliente"><option value="">Todos los clientes</option></select>
 <select id="hist-filtro-servicio"><option value="">Todos los servicios</option><option>Masaje relajante</option><option>Masaje terapéutico</option><option>Masaje descontracturante</option><option>Masaje de Espalda</option><option>Masaje de Piernas</option><option>Masaje deportivo</option><option>Reflexología podal (RTP)</option></select>
-<input type="text" id="hist-busqueda" placeholder="🔍 Buscar...">
+<input type="text" id="hist-busqueda" placeholder=" Buscar...">
 </div>
 <div class="stats">
 <div class="stat-card"><div class="numero" id="hist-contador">0</div><div class="etiqueta">Citas</div></div>
@@ -1460,11 +1497,11 @@ window.onload = function() {
 </div>
 <div id="s7" class="seccion">
 <div class="card">
-<h2>⚙️ Configuración</h2>
+<h2>️ Configuración</h2>
 <h3>📦 Copia de Seguridad</h3>
 <p style="color:#64748b;margin-bottom:10px;">Exporta todos los datos a un archivo JSON para tener una copia de seguridad.</p>
 <button class="btn btn-primary" id="btn-exportar">📥 Exportar datos</button>
-<button class="btn btn-secondary" id="btn-importar"> Importar datos</button>
+<button class="btn btn-secondary" id="btn-importar">📤 Importar datos</button>
 <input type="file" id="input-importar" accept=".json" style="display:none;">
 <h3 style="margin-top:20px;">⚠️ Zona Peligrosa</h3>
 <p style="color:#64748b;margin-bottom:10px;">Borra datos de la base de datos. Esta acción no se puede deshacer.</p>
@@ -1488,7 +1525,7 @@ window.onload = function() {
 <div style="text-align:center;margin-bottom:20px;"><strong style="font-size:1.5rem;color:#0d9488;">Importe: <span id="modal-importe">0€</span></strong></div>
 <h4 style="margin-bottom:10px;">Método de pago:</h4>
 <div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)">💵 Efectivo</div>
-<div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)">💳 Tarjeta</div>
+<div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)"> Tarjeta</div>
 <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)">📱 Bizum</div>
 <div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"> Transferencia</div>
 <div style="margin-top:20px;display:flex;gap:10px;">
