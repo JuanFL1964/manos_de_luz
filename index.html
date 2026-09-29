@@ -17,7 +17,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .header { background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); color: white; padding: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
 .header h1 { font-size: 1.5rem; margin-bottom: 5px; }
 .reloj { font-size: 0.85rem; opacity: 0.9; }
-.nav { display: flex; overflow-x: auto; background: white; border-bottom: 2px solid #e2e8f0; position: sticky; top: 80px; z-index: 99; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.nav { display: flex; overflow-x: auto; background: white; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 99; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 .nav button { flex: 1; min-width: 80px; padding: 12px 8px; border: none; background: white; color: #64748b; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.3s; border-bottom: 3px solid transparent; white-space: nowrap; }
 .nav button.active { color: #0d9488; border-bottom-color: #0d9488; background: #f0fdfa; }
 .nav button:hover { background: #f1f5f9; }
@@ -284,20 +284,20 @@ history.pushState(null, null, window.location.href);
 function resetearBaseDatos() {
     var confirmarInicio = confirm('⚠️ ATENCIÓN: Vas a borrar datos de la base de datos.\n\n¿Deseas continuar con el proceso de selección?\n\n(SÍ = Continuar | NO = Cancelar)');
     if (!confirmarInicio) return;
-    var borrarClientes = confirm('¿Borrar TODOS los CLIENTES?\n\n⚠️ Esto eliminará nombres, teléfonos, emails y puntos de fidelidad.\n\n(SÍ = Borrar clientes | NO = Mantener clientes)');
-    var borrarCitas = confirm('¿Borrar TODAS las CITAS?\n\n️ Esto eliminará el historial de citas pasadas y futuras.\n\n(SÍ = Borrar citas | NO = Mantener citas)');
+    var borrarClientes = confirm('¿Borrar TODOS los CLIENTES?\n\n️ Esto eliminará nombres, teléfonos, emails y puntos de fidelidad.\n\n(SÍ = Borrar clientes | NO = Mantener clientes)');
+    var borrarCitas = confirm('¿Borrar TODAS las CITAS?\n\n⚠️ Esto eliminará el historial de citas pasadas y futuras.\n\n(SÍ = Borrar citas | NO = Mantener citas)');
     var borrarCobros = confirm('¿Borrar TODOS los COBROS?\n\n⚠️ Esto eliminará el historial de pagos y movimientos de caja.\n\n(SÍ = Borrar cobros | NO = Mantener cobros)');
     if (!borrarClientes && !borrarCitas && !borrarCobros) { alert('No has seleccionado nada para borrar. Operación cancelada.'); return; }
-    var resumen = '📋 RESUMEN DE LO QUE SE BORRARÁ:\n\n';
+    var resumen = ' RESUMEN DE LO QUE SE BORRARÁ:\n\n';
     if (borrarClientes) resumen += '✅ Clientes: ' + clientes.length + ' registros\n';
     else resumen += '❌ Clientes: SE MANTIENEN (' + clientes.length + ' registros)\n';
     if (borrarCitas) resumen += '✅ Citas: ' + citas.length + ' registros\n';
     else resumen += '❌ Citas: SE MANTIENEN (' + citas.length + ' registros)\n';
     if (borrarCobros) resumen += '✅ Cobros: ' + cobros.length + ' registros\n';
-    else resumen += ' Cobros: SE MANTIENEN (' + cobros.length + ' registros)\n';
+    else resumen += '❌ Cobros: SE MANTIENEN (' + cobros.length + ' registros)\n';
     resumen += '\nLas TARIFAS siempre se mantienen.\n\n⚠️ ¿CONFIRMAR BORRADO?\n\n(SÍ = Borrar | NO = Cancelar)';
     var confirmarFinal = confirm(resumen);
-    if (!confirmarFinal) { alert(' Operación cancelada. No se ha borrado nada.'); return; }
+    if (!confirmarFinal) { alert('❌ Operación cancelada. No se ha borrado nada.'); return; }
     var batch = db.batch();
     var contadores = { clientes: 0, citas: 0, cobros: 0 };
     if (borrarClientes) { clientes.forEach(function(c) { batch.delete(db.collection('clientes').doc(c.id)); contadores.clientes++; }); }
@@ -307,20 +307,20 @@ function resetearBaseDatos() {
         var msg = '✅ Base de datos actualizada:\n\n';
         if (borrarClientes) msg += '🗑️ ' + contadores.clientes + ' clientes borrados\n';
         else msg += '✔️ ' + contadores.clientes + ' clientes mantenidos\n';
-        if (borrarCitas) msg += '️ ' + contadores.citas + ' citas borradas\n';
+        if (borrarCitas) msg += '🗑️ ' + contadores.citas + ' citas borradas\n';
         else msg += '✔️ ' + contadores.citas + ' citas mantenidas\n';
-        if (borrarCobros) msg += '🗑️ ' + contadores.cobros + ' cobros borrados\n';
+        if (borrarCobros) msg += '️ ' + contadores.cobros + ' cobros borrados\n';
         else msg += '✔️ ' + contadores.cobros + ' cobros mantenidos\n';
         msg += '\nLa página se recargará en 2 segundos.';
         alert(msg);
         setTimeout(function() { location.reload(); }, 2000);
-    }).catch(function(err) { alert(' Error al borrar: ' + err.message); });
+    }).catch(function(err) { alert('❌ Error al borrar: ' + err.message); });
 }
 function exportarDatos() {
     try {
         var d = { clientes: clientes, citas: citas, cobros: cobros, tarifas: tarifas, fecha: new Date().toISOString(), version: '2.0' };
         var jsonStr = JSON.stringify(d, null, 2);
-        if (jsonStr.length < 50) { alert('️ No hay datos'); return; }
+        if (jsonStr.length < 50) { alert('⚠️ No hay datos'); return; }
         var blob = new Blob([jsonStr], { type: 'application/json' });
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
@@ -597,7 +597,7 @@ function mostrarFichaFidelidad(clienteId) {
     html += '<div class="progress-bar" style="margin-top:15px;"><div class="fill ' + (tieneDerecho ? 'completo' : '') + '" style="width:' + (tieneDerecho ? 100 : (puntos % 10) * 10) + '%"></div></div>';
     if (tieneDerecho) {
         html += '<div style="margin-top:15px;padding:15px;background:#fef3c7;border-radius:8px;text-align:center;">';
-        html += '<strong style="color:#92400e;font-size:1.1rem;"> ¡TIENE 1 MASAJE GRATIS DISPONIBLE!</strong>';
+        html += '<strong style="color:#92400e;font-size:1.1rem;">🎉 ¡TIENE 1 MASAJE GRATIS DISPONIBLE!</strong>';
         html += '<p style="margin:10px 0 0 0;font-size:14px;color:#64748b;">Al agendar la cita, marca la casilla "Es masaje GRATIS" y los puntos se restarán 10 automáticamente.</p>';
         html += '</div>';
     } else {
@@ -613,7 +613,7 @@ function mostrarFichaFidelidad(clienteId) {
     html += '<input type="number" id="edit-puntos" value="' + puntos + '" step="0.5" min="0" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:16px;">';
     html += '</div>';
     html += '<button class="btn-regalo" onclick="guardarPuntosEditados(\'' + clienteId + '\')" style="width:100%;padding:12px;font-size:16px;">💾 Guardar cambios</button>';
-    html += '<button onclick="ocultarEditorFidelidad()" style="width:100%;padding:10px;margin-top:8px;background:#6b7280;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">✕ Cancelar</button>';
+    html += '<button onclick="ocultarEditorFidelidad()" style="width:100%;padding:10px;margin-top:8px;background:#6b7280;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;"> Cancelar</button>';
     html += '</div>';
     document.getElementById('contenido-fidelidad').innerHTML = html;
     document.getElementById('ficha-fidelidad').style.display = 'block';
@@ -628,11 +628,11 @@ function ocultarEditorFidelidad() {
 }
 function guardarPuntosEditados(clienteId) {
     var inputPuntos = document.getElementById('edit-puntos');
-    if (!inputPuntos) { alert('❌ Error: No se encuentra el campo de puntos'); return; }
+    if (!inputPuntos) { alert(' Error: No se encuentra el campo de puntos'); return; }
     var nuevosPuntos = parseFloat(inputPuntos.value);
     if (isNaN(nuevosPuntos) || nuevosPuntos < 0) { alert('Los puntos deben ser un número válido mayor o igual a 0'); return; }
     var mensaje = '¿Guardar los nuevos valores?\n\nPuntos: ' + nuevosPuntos.toFixed(1);
-    if (nuevosPuntos >= 10) mensaje += '\n\n️ El cliente tendrá 1 MASAJE GRATIS disponible';
+    if (nuevosPuntos >= 10) mensaje += '\n\n⚠️ El cliente tendrá 1 MASAJE GRATIS disponible';
     if (confirm(mensaje)) {
         db.collection('clientes').doc(clienteId).update({ puntosFidelidad: nuevosPuntos }).then(function() {
             alert('✅ Puntos actualizados correctamente');
@@ -664,7 +664,7 @@ function guardarCita(e) {
     var esGratis = document.getElementById('esGratis').checked;
     var clienteNombre = document.getElementById('c1').value;
     var puntos = getPuntosPorDuracion(duracion);
-    if (!masajista) { alert('️ Selecciona una camilla'); return; }
+    if (!masajista) { alert('⚠️ Selecciona una camilla'); return; }
     if (verificarSolapamiento(fecha, hora, parseInt(duracion), masajista, editandoCita)) { 
         alert('❌ Ya existe una cita para ' + masajista + ' a esa hora'); 
         return; 
@@ -723,7 +723,7 @@ function eliminarCita(id) {
     var cita = citas.find(function(c) { return c.id === id; });
     if (!cita) { alert('❌ No se encuentra la cita'); return; }
     var mensaje = '🚨 DANGER - ELIMINACIÓN DE CITA \n\n';
-    mensaje += ' DATOS DE LA CITA:\n';
+    mensaje += '📋 DATOS DE LA CITA:\n';
     mensaje += '• Cliente: ' + cita.cliente + '\n';
     mensaje += '• Fecha: ' + cita.fecha + '\n';
     mensaje += '• Hora: ' + cita.hora + '\n';
@@ -738,11 +738,11 @@ function eliminarCita(id) {
         mensaje += '• Asegúrate de que el cobro está registrado en Caja\n\n';
     } else {
         mensaje += '⚠️ NO MARCADA COMO COBRADA\n';
-        mensaje += '⚠️ PUEDE HABER SIDO COBRADA EN EFECTIVO\n';
+        mensaje += '⚠️ PUEBE HABER SIDO COBRADA EN EFECTIVO\n';
         mensaje += '• Si la eliminas, no quedará constancia del posible cobro\n';
         mensaje += '• Verifica si se cobró antes de eliminar\n\n';
     }
-    mensaje += '️ ADVERTENCIA IMPORTANTE:\n';
+    mensaje += '⚠️ ADVERTENCIA IMPORTANTE:\n';
     mensaje += '• Esta acción quedará REGISTRADA DE FORMA PERMANENTE\n';
     mensaje += '• No se podrá deshacer ni borrar el registro\n';
     mensaje += '• Se eliminará la cita pero quedará constancia en auditoría\n\n';
@@ -790,10 +790,10 @@ function eliminarCita(id) {
                 }
             }
             db.collection('citas').doc(id).delete().then(function() {
-                mostrarEstado('️ Cita eliminada (registrada en auditoría)', 3000);
+                mostrarEstado('🗑️ Cita eliminada (registrada en auditoría)', 3000);
                 console.log('✅ Cita eliminada. Registro de auditoría:', registroAuditoria);
             }).catch(function(err) {
-                alert('❌ Error al eliminar cita: ' + err.message);
+                alert(' Error al eliminar cita: ' + err.message);
             });
         }).catch(function(err) {
             alert('❌ Error al crear registro de auditoría: ' + err.message);
@@ -815,7 +815,7 @@ function verificarPasswordCobro() {
         cerrarModalPassword();
         if (cobroEliminarPendiente) {
             db.collection('cobros').doc(cobroEliminarPendiente).delete();
-            mostrarEstado('️ Cobro eliminado', 2000);
+            mostrarEstado('🗑️ Cobro eliminado', 2000);
             cobroEliminarPendiente = null;
         }
     } else {
@@ -831,7 +831,7 @@ function verificarPasswordCobro() {
                 usuario: 'Usuario local',
                 timestamp: Date.now()
             });
-            alert('️ 3 intentos fallidos. Acción registrada en auditoría.');
+            alert('⚠️ 3 intentos fallidos. Acción registrada en auditoría.');
             cerrarModalPassword();
             intentosFallidos = 0;
         }
@@ -967,7 +967,7 @@ function actualizar() {
             var minCita = parseInt(partes[0]) * 60 + parseInt(partes[1]);
             var esNoShow = (minCita + TIEMPO_NOSHOW) <= ahoraMin;
             var estilo = esNoShow ? 'background:#fee2e2;border-left:4px solid #ef4444;color:#991b1b;' : 'background:#f9fafb;';
-            var etiqueta = esNoShow ? ' <span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold;">❌ NO SHOW</span>' : '';
+            var etiqueta = esNoShow ? ' <span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold;"> NO SHOW</span>' : '';
             var masajistaInfo = getMasajistaTag(c.masajista, '11px');
             hd += '<div style="padding:12px;margin:8px 0;border-radius:6px;' + estilo + '"><strong>' + c.cliente + '</strong> - ' + c.servicio + ' (' + c.hora + ') ' + masajistaInfo + etiqueta + '</div>';
         });
@@ -1030,17 +1030,17 @@ function enviarWhatsAppCliente(clienteId) {
     mensaje += 'Hora: ' + proximaCita.hora + 'h\n';
     mensaje += 'Servicio: ' + proximaCita.servicio + ' (' + proximaCita.duracion + ' min)\n\n';
     mensaje += 'Si necesitas cambiar o cancelar la cita, avisanos con antelacion. ¡Te esperamos!';
-    if (confirm('📱 Enviar recordatorio por WhatsApp a ' + cliente.nombre + '?\n\n' + mensaje)) {
+    if (confirm(' Enviar recordatorio por WhatsApp a ' + cliente.nombre + '?\n\n' + mensaje)) {
         var url = 'whatsapp://send?phone=' + telefono + '&text=' + encodeURIComponent(mensaje);
         window.open(url, '_blank');
     }
 }
 function enviarWhatsAppCita(citaId) {
     var cita = citas.find(function(c) { return c.id === citaId; });
-    if (!cita) { alert(' No se encuentra la cita'); return; }
+    if (!cita) { alert('❌ No se encuentra la cita'); return; }
     var cliente = clientes.find(function(c) { return c.nombre === cita.cliente; });
     if (!cliente || !cliente.telefono) {
-        alert('️ No se encuentra el telefono del cliente "' + cita.cliente + '"\n\nAñade un telefono en la ficha del cliente.');
+        alert('⚠️ No se encuentra el telefono del cliente "' + cita.cliente + '"\n\nAñade un telefono en la ficha del cliente.');
         return;
     }
     var diasSemanaCorto = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
@@ -1299,7 +1299,7 @@ function actualizarGraficos() {
 function actualizarTablaAuditoria() {
     var html = '';
     if (auditoria.length === 0) {
-        html = '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:30px;">📋 No hay registros de eliminaciones</td></tr>';
+        html = '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:30px;"> No hay registros de eliminaciones</td></tr>';
     } else {
         auditoria.forEach(function(reg) {
             var fechaEliminacion = reg.fecha ? new Date(reg.fecha).toLocaleString('es-ES') : '-';
@@ -1545,8 +1545,8 @@ window.onload = function() {
 </div>
 <div class="nav">
 <button id="b1" class="active" onclick="cambiar(1)">🏠 Inicio</button>
-<button id="b2" onclick="cambiar(2)"> Citas</button>
-<button id="b3" onclick="cambiar(3)"> Clientes</button>
+<button id="b2" onclick="cambiar(2)">📅 Citas</button>
+<button id="b3" onclick="cambiar(3)">👥 Clientes</button>
 <button id="b4" onclick="cambiar(4)">💰 Caja</button>
 <button id="b7" onclick="cambiar(5)">💲 Tarifas</button>
 <button id="b6" onclick="cambiar(6)">📊 Histórico</button>
@@ -1561,7 +1561,7 @@ window.onload = function() {
 <div class="stat-card"><div class="numero" id="n4">0€</div><div class="etiqueta">Caja hoy</div></div>
 </div>
 <div class="card">
-<h2>📅 Próximas citas de hoy</h2>
+<h2> Próximas citas de hoy</h2>
 <div id="dc"></div>
 </div>
 </div>
@@ -1639,7 +1639,7 @@ window.onload = function() {
 </div>
 </div>
 <div class="card">
-<h2> Gráficos de Ingresos</h2>
+<h2>📈 Gráficos de Ingresos</h2>
 <div class="filtros-container">
 <label><strong>Período:</strong></label>
 <select id="grafico-periodo" onchange="cambiarGrafico()"><option value="mes">Por Mes</option><option value="año">Por Año</option></select>
@@ -1651,24 +1651,6 @@ window.onload = function() {
 </div>
 <div class="grafico-container"><canvas id="graficoIngresos"></canvas></div>
 <div class="grafico-container-pequeno"><canvas id="graficoMetodos"></canvas></div>
-</div>
-<div class="card">
-<h2>💳 Registrar Cobro Manual</h2>
-<form id="f3">
-<div class="form-row-3">
-<div class="form-group"><label>Fecha</label><input type="date" id="cb1" required></div>
-<div class="form-group"><label>Importe (€)</label><input type="number" id="cb2" step="0.01" min="0" required></div>
-<div class="form-group"><label>Método</label><select id="cb3" required><option value="">Seleccionar...</option><option>Efectivo</option><option>Tarjeta</option><option>Bizum</option><option>Transferencia</option></select></div>
-</div>
-<div class="form-group"><label>Cliente (opcional)</label><select id="cb4"></select></div>
-<div class="form-group"><label>Concepto</label><input type="text" id="cb5"></div>
-<div class="form-group"><label>Notas</label><textarea id="cb6" rows="2"></textarea></div>
-<button type="submit" class="btn btn-primary">Registrar Cobro</button>
-</form>
-</div>
-<div class="card">
-<h2>📋 Movimientos de Caja</h2>
-<table><thead><tr><th>Fecha</th><th>Importe</th><th>Método</th><th>Cliente</th><th>Concepto</th><th>Acciones</th></tr></thead><tbody id="tb3"></tbody></table>
 </div>
 <div class="card">
 <h2>📊 Caja Detallada</h2>
@@ -1743,6 +1725,24 @@ window.onload = function() {
 <tbody id="tb-caja-detallada"></tbody>
 </table>
 </div>
+<div class="card">
+<h2>💳 Registrar Cobro Manual</h2>
+<form id="f3">
+<div class="form-row-3">
+<div class="form-group"><label>Fecha</label><input type="date" id="cb1" required></div>
+<div class="form-group"><label>Importe (€)</label><input type="number" id="cb2" step="0.01" min="0" required></div>
+<div class="form-group"><label>Método</label><select id="cb3" required><option value="">Seleccionar...</option><option>Efectivo</option><option>Tarjeta</option><option>Bizum</option><option>Transferencia</option></select></div>
+</div>
+<div class="form-group"><label>Cliente (opcional)</label><select id="cb4"></select></div>
+<div class="form-group"><label>Concepto</label><input type="text" id="cb5"></div>
+<div class="form-group"><label>Notas</label><textarea id="cb6" rows="2"></textarea></div>
+<button type="submit" class="btn btn-primary">Registrar Cobro</button>
+</form>
+</div>
+<div class="card">
+<h2>📋 Movimientos de Caja</h2>
+<table><thead><tr><th>Fecha</th><th>Importe</th><th>Método</th><th>Cliente</th><th>Concepto</th><th>Acciones</th></tr></thead><tbody id="tb3"></tbody></table>
+</div>
 </div>
 <div id="s5" class="seccion">
 <div class="card">
@@ -1755,7 +1755,7 @@ window.onload = function() {
 </div>
 <div id="s6" class="seccion">
 <div class="card">
-<h2> Histórico de Citas</h2>
+<h2>📊 Histórico de Citas</h2>
 <div class="filtros-container">
 <input type="date" id="hist-filtro-inicio" title="Fecha inicio">
 <input type="date" id="hist-filtro-fin" title="Fecha fin">
@@ -1776,7 +1776,7 @@ window.onload = function() {
 <h2>⚙️ Configuración</h2>
 <h3>📦 Copia de Seguridad</h3>
 <p style="color:#64748b;margin-bottom:10px;">Exporta todos los datos a un archivo JSON para tener una copia de seguridad.</p>
-<button class="btn btn-primary" id="btn-exportar">📥 Exportar datos</button>
+<button class="btn btn-primary" id="btn-exportar"> Exportar datos</button>
 <button class="btn btn-secondary" id="btn-importar">📤 Importar datos</button>
 <input type="file" id="input-importar" accept=".json" style="display:none;">
 <h3 style="margin-top:20px;">⚠️ Zona Peligrosa</h3>
@@ -1801,9 +1801,9 @@ window.onload = function() {
 <div style="text-align:center;margin-bottom:20px;"><strong style="font-size:1.5rem;color:#0d9488;">Importe: <span id="modal-importe">0€</span></strong></div>
 <h4 style="margin-bottom:10px;">Método de pago:</h4>
 <div class="metodo-pago" onclick="seleccionarMetodo('Efectivo', this)">💵 Efectivo</div>
-<div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)"> Tarjeta</div>
+<div class="metodo-pago" onclick="seleccionarMetodo('Tarjeta', this)">💳 Tarjeta</div>
 <div class="metodo-pago" onclick="seleccionarMetodo('Bizum', this)">📱 Bizum</div>
-<div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)"> Transferencia</div>
+<div class="metodo-pago" onclick="seleccionarMetodo('Transferencia', this)">🏦 Transferencia</div>
 <div style="margin-top:20px;display:flex;gap:10px;">
 <button class="btn btn-primary" style="flex:1;" onclick="confirmarCobro()">✅ Confirmar Cobro</button>
 <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalCobro()">❌ Cancelar</button>
@@ -1812,13 +1812,13 @@ window.onload = function() {
 </div>
 <div id="modal-password">
     <div class="modal-content">
-        <h3>🔒 Eliminación de Cobro</h3>
+        <h3> Eliminación de Cobro</h3>
         <p style="color:#64748b;margin-bottom:15px;">Introduce la contraseña de administrador para eliminar este cobro:</p>
         <input type="password" id="password-input" placeholder="Contraseña..." onkeypress="if(event.key==='Enter') verificarPasswordCobro()">
         <div id="password-error" class="error">❌ Contraseña incorrecta</div>
         <div style="margin-top:20px;display:flex;gap:10px;">
             <button class="btn btn-primary" style="flex:1;" onclick="verificarPasswordCobro()">✅ Confirmar</button>
-            <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalPassword()"> Cancelar</button>
+            <button class="btn btn-secondary" style="flex:1;" onclick="cerrarModalPassword()">❌ Cancelar</button>
         </div>
     </div>
 </div>
